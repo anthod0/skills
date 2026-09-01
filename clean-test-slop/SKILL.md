@@ -12,7 +12,7 @@ Reduce the selected tests to **signal**: assertions that fail when supported obs
 
 Use invocation arguments as the scope. With no arguments, inspect every discoverable test in the current project. Read repository instructions, test configuration, relevant specifications, and the production interfaces exercised by the tests. Identify test commands from project configuration rather than guessing them. Record the existing working-tree state and preserve unrelated edits.
 
-Run the narrowest applicable test command before editing when practical. Record existing failures instead of treating them as cleanup regressions.
+Before running a filesystem-touching test, apply the `test-filesystem-safety` skill and inspect its setup and teardown. Do not baseline an unsafe test. Otherwise, run the narrowest applicable test command before editing when practical. Record existing failures instead of treating them as cleanup regressions.
 
 **Complete when:** the candidate test files, applicable commands, pre-existing failures, and pre-existing local edits are explicitly known.
 

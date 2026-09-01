@@ -11,6 +11,8 @@ When exploring the codebase, read `CONTEXT.md` (if it exists) to get a clear men
 
 ## Phase 1 — Build a feedback loop
 
+Before writing or running a filesystem-touching repro or test, apply the `test-filesystem-safety` skill; an unsafe existing harness is a blocker, not a command to execute.
+
 **This is the skill.** Everything else is mechanical. If you have a **tight** pass/fail signal for the bug — one that goes red on _this_ bug — you will find the cause; bisection, hypothesis-testing, and instrumentation all just consume it. If you don't have one, no amount of staring at code will save you.
 
 Spend disproportionate effort here. **Be aggressive. Be creative. Refuse to give up.**
