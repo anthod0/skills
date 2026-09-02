@@ -1,14 +1,14 @@
 ---
-name: setup-matt-pocock-skills
+name: setup-skills
 description: Configure this repo for the engineering skills — set up its issue tracker and domain doc layout. Run once before first use of the other engineering skills.
 disable-model-invocation: true
 ---
 
-# Setup Matt Pocock's Skills
+# Setup Skills
 
 Scaffold the per-repo configuration that the engineering skills assume:
 
-- **Issue tracker** — where issues live (GitHub by default; local markdown is also supported out of the box)
+- **Issue tracker** — where issues live (Local Markdown by default; external trackers require an explicit choice)
 - **Domain docs** — where `CONTEXT.md` and ADRs live, and the consumer rules for reading them
 
 This is a prompt-driven skill, not a deterministic script. Explore, present what you found, confirm with the user, then write.
@@ -19,8 +19,7 @@ This is a prompt-driven skill, not a deterministic script. Explore, present what
 
 Look at the current repo to understand its starting state. Read whatever exists; don't assume:
 
-- `git remote -v` and `.git/config` — is this a GitHub repo? Which one?
-- `AGENTS.md` and `CLAUDE.md` at the repo root — does either exist? Is there already an `## Agent skills` section in either?
+- `AGENTS.md` and `CLAUDE.md` at the repo root — does either exist? Is there already an `## Agent skills` section or an explicit tracker choice in either?
 - `CONTEXT.md` and `CONTEXT-MAP.md` at the repo root
 - `docs/adr/` and any `src/*/docs/adr/` directories
 - `docs/agents/` — does this skill's prior output already exist?
@@ -35,16 +34,16 @@ Lead each section with the recommended answer so the user can accept it in a wor
 
 **Section A — Issue tracker.**
 
-> Explainer: The "issue tracker" is where issues live for this repo. Skills like `to-tickets` and `to-spec` read from and write to it — they need to know whether to call `gh issue create`, write a markdown file under `.scratch/`, or follow some other workflow you describe. Pick the place you actually track work for this repo.
+> Explainer: The "issue tracker" is where skills such as `to-tickets` and `to-spec` publish their output.
 
-Default posture: these skills were designed for GitHub. If a `git remote` points at GitHub, propose that. If a `git remote` points at GitLab (`gitlab.com` or a self-hosted host), propose GitLab. Otherwise (or if the user prefers), offer:
+Recommend **Local Markdown** and ask the user to accept it or explicitly choose another tracker. A GitHub or GitLab remote is repository metadata, not a tracker choice; never infer the tracker from it.
 
-- **GitHub** — issues live in the repo's GitHub Issues (uses the `gh` CLI)
-- **GitLab** — issues live in the repo's GitLab Issues (uses the [`glab`](https://gitlab.com/gitlab-org/cli) CLI)
-- **Local markdown** — issues live as files under `.scratch/<feature>/` in this repo (good for solo projects or repos without a remote)
-- **Other** (Jira, Linear, etc.) — ask the user to describe the workflow in one paragraph; the skill will record it as freeform prose
+- **Local Markdown (default)** — files under `.scratch/<feature>/`
+- **GitHub** — GitHub Issues via `gh`; use only when the user or existing project instructions explicitly select it
+- **GitLab** — GitLab Issues via [`glab`](https://gitlab.com/gitlab-org/cli); use only when explicitly selected
+- **Other** — record the user's workflow as freeform prose
 
-Record the choice in `docs/agents/issue-tracker.md`.
+Record the confirmed choice in `docs/agents/issue-tracker.md`.
 
 **Section B — Domain docs.** Default to **single-context** — one `CONTEXT.md` + `docs/adr/` at the repo root. This fits almost every repo; write it without asking.
 
