@@ -41,6 +41,8 @@ Give each ticket its **blocking edges** — the other tickets that must complete
 
 ### 4. Quiz the user
 
+The labels below describe semantic fields, not required literal wording.
+
 Present the proposed breakdown as a numbered list. For each ticket, show:
 
 - **Title**: short descriptive name
@@ -65,6 +67,8 @@ Publish the approved tickets. **How** depends on the tracker `/setup-skills` con
 Work the **frontier**: any ticket whose blockers are all done. For a purely linear chain that means top to bottom.
 
 Do NOT close or modify any parent issue.
+
+The templates below specify semantic structure; their headings and labels are not required literal wording.
 
 <local-ticket-template>
 
