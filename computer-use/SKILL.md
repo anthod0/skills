@@ -8,7 +8,7 @@ description: User requirements for browser automation with system Chromium on de
 - Devices use niri and agent-dedicated system Chromium; do not download Playwright browsers.
 - Use the real persistent user data directory and `Default` profile, preserving logins; do not substitute an isolated context or copied profile.
 - Resolve device-specific paths locally rather than recording them in this skill.
-- Obtain current desktop variables from `systemctl --user show-environment`: `DISPLAY`, `WAYLAND_DISPLAY`, `XDG_RUNTIME_DIR`, `DBUS_SESSION_BUS_ADDRESS`, and, when present, `XAUTHORITY` and `XDG_CURRENT_DESKTOP`. Overlay these onto the inherited process environment when launching. Missing variables in an SSH shell do not mean the desktop is unavailable.
+- Obtain the current desktop session environment from `systemctl --user show-environment` and apply the relevant variables when launching Chromium.
 
 ## Usage
 
