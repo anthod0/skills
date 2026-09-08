@@ -12,15 +12,21 @@ description: User requirements for browser automation with system Chromium on de
 
 ## Usage
 
-### playwright-cli
+### Mode A: playwright-cli
 
-- The globally installed CLI runs from any working directory and automatically loads `~/.playwright/cli.config.json`, which holds local browser, profile, output paths, and launch settings.
+Use this mode for browser automation through the globally installed CLI.
 
-### Playwright working directory
+- Run `playwright-cli` directly from the current working directory.
+- It automatically loads `~/.playwright/cli.config.json`, which contains local browser, profile, output paths, and launch settings.
 
-- The working directory `$HOME/tools/computer-use` holds scripts and their installed local `playwright` dependency.
-- Shared launcher: `$HOME/tools/computer-use/browser.ts` exports `launchBrowser()`.
-- Use Bun to manage dependencies and execute scripts. Keep tooling and generated output outside application projects.
+### Mode B: Playwright scripts
+
+Use this mode when automation requires a custom script.
+
+- Work in `$HOME/tools/computer-use`, which contains the installed local `playwright` dependency.
+- Use the shared launcher: `browser.ts` exports `launchBrowser()`.
+- Use Bun to manage dependencies and execute scripts.
+- Keep tooling and generated output outside application projects.
 
 ## Precautions
 
