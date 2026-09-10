@@ -1,14 +1,13 @@
 ---
 name: clean-ai-slop
-description: Remove low-value AI-generated slop from tests and documentation using separate cleanup workflows.
-disable-model-invocation: true
+description: Clean low-value tests and documentation after implementing code changes, before the final response. Also use when explicitly asked to clean tests or documentation.
 ---
 
 # Clean AI Slop
 
 ## Entry and shared boundaries
 
-Use invocation arguments to select the scope and workflow: **test cleanup**, **documentation cleanup**, or both. With no arguments, inspect every discoverable test and documentation file in the current project. When both are selected, execute and report each workflow separately. Do not apply documentation rules to test assertions or test criteria to prose.
+After implementing code changes, inspect tests and documentation changed by the task. For explicit cleanup requests, use the requested scope; with no scope specified, inspect all discoverable tests and documentation in the current project.
 
 Read repository instructions, record the existing working-tree state, and preserve unrelated edits. The invocation authorizes deletion within the selected scope. Confine changes to selected files and their exclusively owned artifacts; report production-code issues instead of changing product behavior. Keep analysis and cleanup reports in working notes and the response, not in project documentation.
 
@@ -55,7 +54,7 @@ Apply the smallest coherent deletion:
 2. Delete the case when removing its slop leaves no meaningful oracle or only duplicates another case.
 3. Delete the file when no signal-bearing case remains.
 
-Remove snapshots, fixtures, and test-only helpers owned exclusively by deleted tests after confirming they have no remaining references. This workflow edits only tests and test-only artifacts.
+Remove snapshots, fixtures, and test-only helpers owned exclusively by deleted tests after confirming they have no remaining references. Edit only tests and test-only artifacts.
 
 **Complete when:** evidenced test slop is removed, with no empty test shells or orphaned test artifacts.
 
@@ -77,7 +76,7 @@ Keep documentation concise and focused on current externally observable outcomes
 
 ### B1. Establish documentation scope
 
-Identify candidate documents, their audience, and their purpose. Read relevant code to verify claims about implemented behavior. Identify applicable documentation validation commands and pre-existing issues. Do not run the test-cleanup workflow merely because documentation references tests.
+Identify candidate documents, their audience, and their purpose. Read relevant code to verify claims about implemented behavior. Identify applicable documentation validation commands and pre-existing issues.
 
 **Complete when:** candidate documents, authoritative code references, available checks, and pre-existing local edits are known.
 
@@ -97,7 +96,7 @@ Classify documentation slop as **process history**, **negative residue**, **verb
 
 ### B3. Clean documentation
 
-Delete slop at the sentence, section, or file boundary. Rewrite only as needed to leave concise, coherent final-state facts. Remove links and assets owned exclusively by deleted documentation after checking references. This workflow edits only documentation and documentation-only artifacts.
+Delete slop at the sentence, section, or file boundary. Rewrite only as needed to leave concise, coherent final-state facts. Remove links and assets owned exclusively by deleted documentation after checking references. Edit only documentation and documentation-only artifacts.
 
 Do not add deletion notices, cleanup ledgers, or progress reports to project documents. Do not change code to make stale documentation true.
 
