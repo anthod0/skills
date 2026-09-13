@@ -35,7 +35,7 @@ For every test in scope, identify:
 
 Classify as slop when it matches a category below and has no stronger behavioral signal:
 
-- **TDD residue** — temporary scaffolding, placeholder or tracer tests, imagined future behavior, incremental cases made redundant by a later behavioral test, or checks that only prove the harness is wired.
+- **Test-development residue** — temporary scaffolding, placeholder or tracer tests, imagined future behavior, incremental cases made redundant by a later behavioral test, or checks that only prove the harness is wired.
 - **Low-signal test** — tautological or always-passing assertions, tests without a meaningful oracle, duplicate coverage, implementation-coupled checks, mock choreography, superficial shape checks, or snapshots of incidental structure.
 - **Copy check** — assertions whose subject is literal prose, documentation wording, styling, markup shape, or presentational UI text rather than an explicit product contract.
 - **Fiction negative** — assertions that preserve the absence of an invented variable, command, code path, branch, element, screen, or unsupported behavior.
