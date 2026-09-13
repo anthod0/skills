@@ -1,6 +1,6 @@
 ---
 name: clean-ai-slop
-description: Clean low-value tests and documentation after implementing code changes, before the final response. Also use when explicitly asked to clean tests or documentation.
+description: Clean low-value tests and documentation after implementing code changes, before the final response.
 ---
 
 # Clean AI Slop
