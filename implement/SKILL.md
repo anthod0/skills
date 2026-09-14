@@ -7,6 +7,8 @@ Implement the user-confirmed work. If a spec exists for the work, read it in ful
 
 Run typechecking regularly, single test files regularly, and the full test suite once at the end. Apply the `test-filesystem-safety` skill before writing or running any filesystem-touching test.
 
+Use /clean-ai-slop if the task changed tests or documentation.
+
 Once done, use /code-review to review the work.
 
 Commit your work to the current branch by default.
