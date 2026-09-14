@@ -1,71 +1,31 @@
 ---
 name: to-spec
-description: Turn the current conversation into a spec and publish it to the project issue tracker — no interview, just synthesis of what you've already discussed.
+description: Reconcile confirmed requirements into a source-grounded implementation spec.
 disable-model-invocation: true
 ---
 
-This skill takes the current conversation context and codebase understanding and produces a spec (you may know this document as a PRD). Do NOT interview the user — just synthesize what you already know.
+# To Spec
 
-Read `docs/agents/issue-tracker.md` when present. Without an explicit tracker configuration, use Local Markdown under `.scratch/`; a GitHub remote alone never selects GitHub Issues.
+Create a spec from the current conversation and any referenced source material.
 
-## Process
+Inspect only the code and project documentation needed to verify relevant existing behavior, constraints, and terminology.
 
-1. Explore the repo to understand the current state of the codebase, if you haven't already. Use the project's domain glossary vocabulary throughout the spec, and respect any ADRs in the area you're touching.
+Do not expand the requested scope. Requirements must be explicitly supported by the conversation or referenced source material. Use existing behavior only to verify context and constraints, not as a source of new requirements. Put uncertain or inferred possibilities under Open Questions rather than presenting them as requirements.
 
-2. Sketch out the seams at which you're going to test the feature. Existing seams should be preferred to new ones. Use the highest seam possible. If new seams are needed, propose them at the highest point you can. The fewer seams across the codebase, the better - the ideal number is one.
+Include only sections that add useful information:
 
-Check with the user that these seams match their expectations.
+- **Problem** — what the user needs to change or accomplish.
+- **Desired outcome** — the externally observable result.
+- **Requirements** — confirmed behavior and constraints.
+- **Acceptance criteria** — how completion can be verified.
+- **Implementation decisions** — established technical or architectural decisions that constrain the work.
+- **Out of scope** — boundaries that are useful to state explicitly.
+- **Open questions or assumptions** — unresolved points that must not be treated as requirements.
 
-3. Write the spec using the template below, then publish it to the project issue tracker.
+Use user stories only when distinct actors or journeys make the requirements clearer. Do not generate stories for comprehensiveness.
 
-<spec-template>
+Avoid file paths and code snippets unless they precisely capture an established interface or design decision that prose would make ambiguous.
 
-The headings and phrasing below specify semantic structure, not literal output wording.
+Publish the completed spec using the tracker configured in `docs/agents/issue-tracker.md`. Without explicit tracker configuration, write `.scratch/<feature-slug>/spec.md`; a Git remote alone does not select an external tracker.
 
-## Problem Statement
-
-The problem that the user is facing, from the user's perspective.
-
-## Solution
-
-The solution to the problem, from the user's perspective.
-
-## User Stories
-
-A LONG, numbered list of user stories. Each user story should communicate an actor, a desired feature, and the resulting benefit as one coherent statement rather than follow fixed wording.
-
-This list of user stories should be extremely extensive and cover all aspects of the feature.
-
-## Implementation Decisions
-
-A list of implementation decisions that were made. This can include:
-
-- The modules that will be built/modified
-- The interfaces of those modules that will be modified
-- Technical clarifications from the developer
-- Architectural decisions
-- Schema changes
-- API contracts
-- Specific interactions
-
-Do NOT include specific file paths or code snippets. They may end up being outdated very quickly.
-
-Exception: if a prototype produced a snippet that encodes a decision more precisely than prose can (state machine, reducer, schema, type shape), inline it within the relevant decision and note briefly that it came from a prototype. Trim to the decision-rich parts — not a working demo, just the important bits.
-
-## Testing Decisions
-
-A list of testing decisions that were made. Include:
-
-- A description of what makes a good test (only test external behavior, not implementation details)
-- Which modules will be tested
-- Prior art for the tests (i.e. similar types of tests in the codebase)
-
-## Out of Scope
-
-A description of the things that are out of scope for this spec.
-
-## Further Notes
-
-Any further notes about the feature.
-
-</spec-template>
+The spec is complete when it faithfully captures the agreed scope, separates confirmed requirements from unknowns, and can be implemented and reviewed without further decomposition.

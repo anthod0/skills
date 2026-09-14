@@ -34,7 +34,7 @@ Lead each section with the recommended answer so the user can accept it in a wor
 
 **Section A — Issue tracker.**
 
-> Explainer: The "issue tracker" is where skills such as `to-tickets` and `to-spec` publish their output.
+> Explainer: The "issue tracker" is where `to-spec` publishes its output.
 
 Recommend **Local Markdown** and ask the user to accept it or explicitly choose another tracker. A GitHub or GitLab remote is repository metadata, not a tracker choice; never infer the tracker from it.
 
