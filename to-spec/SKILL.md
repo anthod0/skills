@@ -12,7 +12,9 @@ Treat the conversation and referenced source material as the authority for the r
 
 ## Process
 
-Write the spec using the structure of the template below, preferably in the user's language, then publish it to the project issue tracker.
+Write the entire spec in the user's language, following the structure defined by `<spec-template>`, then publish it to the project issue tracker.
+
+The `<spec-template>` block defines the document's structure and semantics, not literal output wording. Write all headings, user stories, and prose in the user's language rather than copying the English wording from the template.
 
 <spec-template>
 
