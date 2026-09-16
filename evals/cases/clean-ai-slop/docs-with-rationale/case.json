@@ -1,0 +1,6 @@
+{
+  "fixture": "config-loader",
+  "skill": "clean-ai-slop",
+  "allowed_changes": ["README.md"],
+  "test_command": ["node", "--test", "tests/config.test.mjs"]
+}

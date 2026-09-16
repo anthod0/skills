@@ -1,0 +1,1 @@
+Clean up low-value or brittle tests in `tests/` while preserving meaningful coverage of supported behavior. Refer to the product contract in the repository. Modify only tests, not product code or documentation. When finished, explain the rationale for what you removed and retained, and report the validation results.

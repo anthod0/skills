@@ -1,0 +1,6 @@
+{
+  "fixture": "config-loader",
+  "skill": "test-filesystem-safety",
+  "allowed_changes": ["src/config.mjs", "tests/**"],
+  "test_command": ["node", "--test"]
+}

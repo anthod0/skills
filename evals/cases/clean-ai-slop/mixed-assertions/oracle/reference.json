@@ -1,0 +1,17 @@
+[
+  {
+    "file": "tests/config.test.mjs",
+    "before": "  assert.deepEqual(Object.keys(config), ['endpoint', 'retries']);\n",
+    "after": ""
+  },
+  {
+    "file": "tests/config.test.mjs",
+    "before": "\ntest('configuration test harness is ready', () => {\n  assert.equal(true, true);\n});\n",
+    "after": ""
+  },
+  {
+    "file": "tests/config.test.mjs",
+    "before": "\ntest('does not expose a retry wizard', () => {\n  const config = parseConfig(JSON.stringify({ endpoint }));\n  assert.equal(config.retryWizard, undefined);\n});\n",
+    "after": ""
+  }
+]

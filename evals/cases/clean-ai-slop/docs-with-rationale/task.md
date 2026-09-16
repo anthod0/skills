@@ -1,0 +1,1 @@
+Streamline the README for people maintaining the Dispatch integration. Remove low-value content while preserving information useful to those readers. Modify only the README, not code, tests, or CONTRACT.md; do not document the cleanup process in the project documentation.

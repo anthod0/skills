@@ -1,0 +1,6 @@
+{
+  "fixture": "config-loader",
+  "skill": "clean-ai-slop",
+  "allowed_changes": ["tests/**"],
+  "test_command": ["node", "--test"]
+}

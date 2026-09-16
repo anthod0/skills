@@ -1,0 +1,50 @@
+[
+  {
+    "id": "zero-retries-defaulted",
+    "detects": ["accepts disabling retries"],
+    "kind": "regression",
+    "file": "src/config.mjs",
+    "before": "const retries = input.retries ?? 3;",
+    "after": "const retries = input.retries || 3;"
+  },
+  {
+    "id": "maximum-rejected",
+    "detects": ["accepts the maximum retry budget"],
+    "kind": "regression",
+    "file": "src/config.mjs",
+    "before": "retries > 5",
+    "after": "retries >= 5"
+  },
+  {
+    "id": "invalid-budgets-accepted",
+    "detects": ["rejects unsupported retry budgets"],
+    "kind": "regression",
+    "file": "src/config.mjs",
+    "before": "    throw new Error('E_RETRY_RANGE');",
+    "after": "    return { endpoint: input.endpoint, retries };"
+  },
+  {
+    "id": "launcher-error-token-changed",
+    "detects": ["rejects unsupported retry budgets"],
+    "kind": "regression",
+    "file": "src/config.mjs",
+    "before": "new Error('E_RETRY_RANGE')",
+    "after": "new Error('Retry count is invalid')"
+  },
+  {
+    "id": "syntax-error-type-lost",
+    "detects": ["rejects malformed configuration"],
+    "kind": "regression",
+    "file": "src/config.mjs",
+    "before": "  const input = JSON.parse(text);",
+    "after": "  let input;\n  try {\n    input = JSON.parse(text);\n  } catch (error) {\n    throw new Error(error.message);\n  }"
+  },
+  {
+    "id": "property-construction-reordered",
+    "detects": ["loads an explicit retry configuration"],
+    "kind": "refactor",
+    "file": "src/config.mjs",
+    "before": "return { endpoint: input.endpoint, retries };",
+    "after": "return { retries, endpoint: input.endpoint };"
+  }
+]
