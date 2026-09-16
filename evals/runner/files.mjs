@@ -1,29 +1,32 @@
-import { constants } from 'node:fs';
-import { open, lstat, readdir, mkdir, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import { checkPath } from './plan.mjs';
+import { constants } from "node:fs";
+import { open, lstat, readdir, mkdir, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { checkPath } from "./plan.mjs";
 
 const fileLimit = 1024 * 1024;
 const treeLimit = 16 * 1024 * 1024;
 
 export function checkFiles(files) {
-  if (!files || typeof files !== 'object' || Array.isArray(files)) throw new Error('Expected text file map');
+  if (!files || typeof files !== "object" || Array.isArray(files))
+    throw new Error("Expected text file map");
   let size = 0;
-  if (Object.keys(files).length > 512) throw new Error('Too many files');
+  if (Object.keys(files).length > 512) throw new Error("Too many files");
   for (const [path, text] of Object.entries(files)) {
     checkPath(path);
-    if (path.split('/').includes('.git')) throw new Error('Git metadata is reserved');
-    if (typeof text !== 'string' || text.includes('\0') || Buffer.byteLength(text) > fileLimit) throw new Error('Invalid or oversized text file');
+    if (path.split("/").includes(".git")) throw new Error("Git metadata is reserved");
+    if (typeof text !== "string" || text.includes("\0") || Buffer.byteLength(text) > fileLimit)
+      throw new Error("Invalid or oversized text file");
     size += Buffer.byteLength(text);
   }
-  if (size > treeLimit) throw new Error('File tree too large');
+  if (size > treeLimit) throw new Error("File tree too large");
 }
 
 export async function readRegular(path) {
   const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
   try {
     const info = await handle.stat();
-    if (!info.isFile() || info.nlink !== 1 || info.size > fileLimit) throw new Error('Expected bounded regular file, not a link');
+    if (!info.isFile() || info.nlink !== 1 || info.size > fileLimit)
+      throw new Error("Expected bounded regular file, not a link");
     const buffer = Buffer.alloc(fileLimit + 1);
     let length = 0;
     while (length < buffer.length) {
@@ -31,30 +34,34 @@ export async function readRegular(path) {
       if (!bytesRead) break;
       length += bytesRead;
     }
-    if (length > fileLimit) throw new Error('File too large');
-    const text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(buffer.subarray(0, length));
-    if (text.includes('\0')) throw new Error('Binary file is not supported');
+    if (length > fileLimit) throw new Error("File too large");
+    const text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(
+      buffer.subarray(0, length),
+    );
+    if (text.includes("\0")) throw new Error("Binary file is not supported");
     return text;
-  } finally { await handle.close(); }
+  } finally {
+    await handle.close();
+  }
 }
 
 export async function readTree(root, { ignoreGit = false } = {}) {
   const files = Object.create(null);
   let entries = 0;
   let size = 0;
-  async function visit(directory, prefix = '') {
-    if (!(await lstat(directory)).isDirectory()) throw new Error('Expected directory, not symlink');
+  async function visit(directory, prefix = "") {
+    if (!(await lstat(directory)).isDirectory()) throw new Error("Expected directory, not symlink");
     for (const name of (await readdir(directory)).sort()) {
-      if (ignoreGit && !prefix && name === '.git') continue;
-      if (++entries > 512) throw new Error('Too many tree entries');
+      if (ignoreGit && !prefix && name === ".git") continue;
+      if (++entries > 512) throw new Error("Too many tree entries");
       const relative = prefix + name;
       checkPath(relative);
       const path = join(directory, name);
-      if ((await lstat(path)).isDirectory()) await visit(path, relative + '/');
+      if ((await lstat(path)).isDirectory()) await visit(path, relative + "/");
       else {
         files[relative] = await readRegular(path);
         size += Buffer.byteLength(files[relative]);
-        if (size > treeLimit) throw new Error('File tree too large');
+        if (size > treeLimit) throw new Error("File tree too large");
       }
     }
   }
@@ -68,6 +75,6 @@ export async function writeTree(root, files) {
   for (const [path, text] of Object.entries(files)) {
     const destination = join(root, path);
     await mkdir(dirname(destination), { recursive: true });
-    await writeFile(destination, text, { flag: 'wx' });
+    await writeFile(destination, text, { flag: "wx" });
   }
 }
