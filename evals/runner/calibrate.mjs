@@ -1,33 +1,14 @@
-import { lstat, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash, randomUUID } from 'node:crypto';
 import { checkPath, createPlan } from './plan.mjs';
 import { assess } from './result.mjs';
-import { docker, runInContainer } from './docker.mjs';
+import { buildImage, runInContainer } from './docker.mjs';
+import { readRegular, readTree } from './files.mjs';
 
 const evalRoot = fileURLToPath(new URL('../', import.meta.url));
 const runnerRoot = join(evalRoot, 'runner');
-
-async function readRegular(path) {
-  if (!(await lstat(path)).isFile()) throw new Error(`Expected regular file: ${path}`);
-  return readFile(path, 'utf8');
-}
-
-async function readTree(root, prefix = '') {
-  if (!(await lstat(root)).isDirectory()) throw new Error(`Expected directory, not symlink: ${root}`);
-  const files = Object.create(null);
-  for (const entry of (await readdir(root)).sort()) {
-    const relative = prefix + entry;
-    checkPath(relative);
-    const path = join(root, entry);
-    const stat = await lstat(path);
-    if (stat.isSymbolicLink()) throw new Error(`Symlinks are not accepted: ${path}`);
-    if (stat.isDirectory()) Object.assign(files, await readTree(path, relative + '/'));
-    else files[relative] = await readRegular(path);
-  }
-  return files;
-}
 
 async function main() {
   const [caseId, flag, ...extra] = process.argv.slice(2);
@@ -63,17 +44,8 @@ async function main() {
   process.on('SIGTERM', interrupt);
   console.log(`Results: ${directory}`);
   try {
-    const preflight = await docker(['info', '--format', '{{.ServerVersion}}'], { signal: abort.signal });
-    if (preflight.problem || preflight.code !== 0) throw new Error(`Docker unavailable: ${preflight.problem ?? preflight.stderr}`);
-    report.dockerVersion = preflight.stdout.trim();
-    const build = await docker(['build', '--network=host', '--iidfile', join(directory, 'image-id'), runnerRoot], {
-      timeoutMs: 300_000, signal: abort.signal,
-    });
-    await writeFile(join(directory, 'build.log'), build.stdout + build.stderr);
-    if (build.problem || build.code !== 0) throw new Error(`Image build failed: ${build.problem ?? build.stderr}`);
-    const image = (await readRegular(join(directory, 'image-id'))).trim();
-    if (!/^sha256:[a-f0-9]{64}$/.test(image)) throw new Error('Invalid built image ID');
-    report.image = image;
+    Object.assign(report, await buildImage(directory, abort.signal));
+    const { image } = report;
     for (const job of jobs) {
       if (abort.signal.aborted) throw new Error('Interrupted');
       const started = Date.now();

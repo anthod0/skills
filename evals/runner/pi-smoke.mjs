@@ -1,22 +1,17 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { homedir } from 'node:os';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
-import { docker, runPiContainer } from './docker.mjs';
-import { selectAuth, assessPiSmoke } from './pi-smoke-result.mjs';
+import { buildImage, runPiContainer } from './docker.mjs';
+import { readAuth } from './auth.mjs';
+import { assessPiSmoke } from './pi-smoke-result.mjs';
 
 async function main() {
   const [provider, model, authFile, ...extra] = process.argv.slice(2);
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(provider ?? '') || !model || model.startsWith('-') || extra.length) {
     throw new Error('Usage: bun evals/runner/pi-smoke.mjs <provider> <model> [auth-file]');
   }
-  const authPath = authFile ?? join(process.env.PI_CODING_AGENT_DIR ?? join(homedir(), '.pi/agent'), 'auth.json');
-  let authText;
-  try { authText = await readFile(authPath, 'utf8'); }
-  catch { throw new Error('Cannot read authentication file'); }
-  const auth = selectAuth(authText, provider);
-  const runnerRoot = fileURLToPath(new URL('.', import.meta.url));
+  const auth = await readAuth(provider, authFile);
   const directory = fileURLToPath(new URL(`../runs/pi-smoke-${new Date().toISOString().replaceAll(':', '-')}-${randomUUID()}/`, import.meta.url));
   await mkdir(directory, { recursive: true, mode: 0o700 });
   const report = { provider, model, thinking: 'low', status: 'running', startedAt: new Date().toISOString() };
@@ -26,18 +21,16 @@ async function main() {
   process.on('SIGTERM', interrupt);
   console.log(`Results: ${directory}`);
   try {
-    const preflight = await docker(['info', '--format', '{{.ServerVersion}}'], { signal: abort.signal });
-    if (preflight.problem || preflight.code !== 0) throw new Error('Docker unavailable');
-    report.dockerVersion = preflight.stdout.trim();
-    const build = await docker([
-      'build', '--network=host', '--file', join(runnerRoot, 'Dockerfile.pi'),
-      '--iidfile', join(directory, 'image-id'), runnerRoot,
-    ], { timeoutMs: 300_000, signal: abort.signal });
-    await writeFile(join(directory, 'build.log'), build.stdout + build.stderr);
-    if (build.problem || build.code !== 0) throw new Error('Pi image build failed; see build.log');
-    report.image = (await readFile(join(directory, 'image-id'), 'utf8')).trim();
-    if (!/^sha256:[a-f0-9]{64}$/.test(report.image)) throw new Error('Invalid built image ID');
-    const execution = await runPiContainer(report.image, { provider, model, auth }, { signal: abort.signal });
+    Object.assign(report, await buildImage(directory, abort.signal));
+    const task = `Perform only this container smoke check. Do not inspect credentials, configuration, or environment variables.
+1. Use write to create /workspace/probe.txt containing exactly BEFORE followed by a newline.
+2. Use edit to replace BEFORE with AFTER in that file.
+3. Use read to verify the updated file.
+4. Use bash to run: test "$(pwd)" = /workspace && test "$(id -u)" -ne 0 && test "$(cat /workspace/probe.txt)" = AFTER && printf 'PI_CONTAINER_TOOLS_OK\\n'
+Do not modify any other files. Finish with exactly PI_SMOKE_OK.`;
+    const execution = await runPiContainer(report.image, {
+      provider, model, auth, task, files: {}, skills: {}, thinking: 'low', budgetSeconds: 180,
+    }, { signal: abort.signal });
     report.exitCode = execution.code;
     report.cleanupFailed = execution.cleanupFailed ?? false;
     report.check = assessPiSmoke(execution, { provider, model });

@@ -1,5 +1,8 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { readFile, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export function docker(args, { input = '', timeoutMs = 30_000, signal } = {}) {
   if (signal?.aborted) return Promise.resolve({ code: null, stdout: '', stderr: '', problem: 'Interrupted' });
@@ -35,7 +38,7 @@ export function docker(args, { input = '', timeoutMs = 30_000, signal } = {}) {
   });
 }
 
-async function runContainer(image, flags, { prefix, input, timeoutMs, signal, invoke = docker }) {
+async function runContainer(image, flags, { prefix, input, timeoutMs, command = [], signal, invoke = docker }) {
   const name = `${prefix}-${randomUUID()}`;
   let execution;
   try {
@@ -44,7 +47,7 @@ async function runContainer(image, flags, { prefix, input, timeoutMs, signal, in
       '--read-only', '--user=1000:1000', '--cap-drop=ALL',
       '--security-opt=no-new-privileges', '--cpus=1',
       '--tmpfs=/workspace:rw,nosuid,nodev,noexec,uid=1000,gid=1000,mode=0700,size=16m',
-      '--tmpfs=/tmp:rw,nosuid,nodev,noexec,size=64m', ...flags, image,
+      '--tmpfs=/tmp:rw,nosuid,nodev,noexec,size=64m', ...flags, image, ...command,
     ], { input, timeoutMs, signal });
   } finally {
     const cleanup = await invoke(['rm', '--force', name], { timeoutMs: 10_000 });
@@ -64,8 +67,26 @@ export function runInContainer(image, { files, command }, options = {}) {
 }
 
 export function runPiContainer(image, payload, options = {}) {
+  if (![180, 600].includes(payload.budgetSeconds)) throw new Error('Unsupported Pi time budget');
   return runContainer(image, [
     '--network=bridge', '--pids-limit=128', '--memory=512m',
     '--tmpfs=/run/pi-agent:rw,nosuid,nodev,noexec,uid=1000,gid=1000,mode=0700,size=16m',
-  ], { ...options, prefix: 'skill-pi-smoke', input: JSON.stringify(payload), timeoutMs: 190_000 });
+  ], {
+    ...options, prefix: 'skill-pi', input: JSON.stringify(payload),
+    timeoutMs: (payload.budgetSeconds + 10) * 1000,
+    command: [`${payload.budgetSeconds}s`, 'node', '/harness/pi-entry.mjs'],
+  });
+}
+
+export async function buildImage(directory, signal) {
+  const preflight = await docker(['info', '--format', '{{.ServerVersion}}'], { signal });
+  if (preflight.problem || preflight.code !== 0) throw new Error('Docker unavailable');
+  const build = await docker([
+    'build', '--network=host', '--iidfile', join(directory, 'image-id'), fileURLToPath(new URL('.', import.meta.url)),
+  ], { timeoutMs: 300_000, signal });
+  await writeFile(join(directory, 'build.log'), build.stdout + build.stderr);
+  if (build.problem || build.code !== 0) throw new Error('Image build failed; see build.log');
+  const image = (await readFile(join(directory, 'image-id'), 'utf8')).trim();
+  if (!/^sha256:[a-f0-9]{64}$/.test(image)) throw new Error('Invalid built image ID');
+  return { image, dockerVersion: preflight.stdout.trim() };
 }

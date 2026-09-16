@@ -1,6 +1,6 @@
 # Skill evaluation cases
 
-`fixtures/` holds the initial repositories given to agents, and `cases/` holds tasks and hidden acceptance criteria. `runner/calibrate.mjs` calibrates test-cleanup cases in Docker; paired agent evaluation is not yet integrated. Passing calibration only means the materials meet the acceptance expectations, not that the skill is effective for a model.
+`fixtures/` holds the initial repositories given to agents, and `cases/` holds tasks and hidden acceptance criteria. `runner/calibrate.mjs` calibrates test-cleanup cases; `runner/evaluate.mjs` runs matched Pi comparisons with and without skills. Both use Docker. Passing calibration establishes attainable acceptance targets, not skill effectiveness.
 
 | Case | Fixture | Evaluation goal |
 | --- | --- | --- |
@@ -13,7 +13,7 @@
 
 Each case contains:
 
-- `case.json`: `fixture` is a directory name under `fixtures/`; `skill` identifies the target skill supplied in the with-skill condition; `allowed_changes` contains paths or globs relative to the run's repository; `test_command` is an argv executed at the repository root without shell expansion.
+- `case.json`: `fixture` is a directory name under `fixtures/`; `skill` identifies the target skill supplied in the with-skill condition; `allowed_changes` contains exact paths or `directory/**` patterns relative to the run's repository; `test_command` is an argv executed at the repository root without shell expansion.
 - `task.md`: the same user task for both comparison conditions, without the oracle.
 - `oracle/`: acceptance criteria, optional hidden variants, and reference cleanup patches. These are not copied into the agent environment.
 
@@ -76,10 +76,37 @@ node --test evals/runner/*.test.mjs
 
 Requires a stored login for the selected provider. The default credential source is `auth.json` under `PI_CODING_AGENT_DIR`, or `~/.pi/agent` when unset. Only that provider's entry is copied, at runtime through stdin, into writable container-local tmpfs. Host authentication is never written back. OAuth refreshes affect the container's copy; a copied login is not an independent account. Literal API keys are also supported; shell-command and environment-variable key references are not resolved by this check.
 
-The separate [Pi image](runner/Dockerfile.pi) pins Pi's version. It uses native Pi tools and prompt construction without host skills, extensions, settings, or context files. The check calls the selected real model at low reasoning, asks it to write/edit/read a disposable file and run a shell check, and verifies the resulting file. It has a three-minute container lifetime limit and uses Docker bridge networking, **not an endpoint-restricted network**. This is a startup check, not a skill comparison or a test of hostile-code containment.
+The shared [Dockerfile](runner/Dockerfile) pins Pi's version; agent and acceptance runs use separate containers. It uses native Pi tools and prompt construction without host skills, extensions, settings, or context files. The check calls the selected real model at low reasoning, asks it to write/edit/read a disposable file and run a shell check, and verifies the resulting file. It has a three-minute container lifetime limit and uses Docker bridge networking, **not an endpoint-restricted network**. This is a startup check, not a skill comparison or a test of hostile-code containment.
 
 `runs/pi-smoke-<run-id>/result.json` contains allowlisted runtime and success metadata; `build.log` records the credential-free image build. Raw model/tool output and authentication payloads are not saved, to avoid archiving credentials if the agent prints them. A failure exits nonzero; timeouts, interruptions, and normal completion all trigger cleanup of the run's own container.
 
-## Future agent evaluation results
+## Paired agent evaluation
 
-Store run artifacts in the Git-ignored `runs/<run-id>/`: model and parameters, fixture/case versions, actual skill content or hashes, budget and cost, complete tool traces, change diffs, and per-criterion acceptance results. With-skill and without-skill conditions use the same task, initial state, and budget.
+Supported cases are `clean-ai-slop/mixed-assertions` and `clean-ai-slop/css-and-prompt-assertions`:
+
+```bash
+# Validate inputs without Docker, credentials, model calls, or fixture execution
+bun evals/runner/evaluate.mjs clean-ai-slop/mixed-assertions --check
+
+# Optional final argument: an explicit auth.json path, as for the smoke check
+bun evals/runner/evaluate.mjs clean-ai-slop/mixed-assertions openai-codex gpt-6-astra
+```
+
+Each invocation builds one image and runs without-skill, then with-skill, serially. Both receive the same task and fresh Git-initialized fixture, selected model, high reasoning, and a ten-minute container lifetime budget (including startup/export). Only the with-skill condition receives the target skill and its filesystem-safety dependency. Skills are explicitly available through Pi's native discovery interface; inspect the trace to determine whether the agent actually read them. No hidden oracle or reference cleanup enters either agent container.
+
+The host archives the exported workspace as text data, never executes it, and checks file additions, deletions, and modifications against `allowed_changes`. Git metadata is excluded. Unsupported exports (links, binary files, unsafe paths, excessive size, or detected credential material) invalidate the run. Scope violations fail without running hidden variants against modified product code. Valid submissions run against the baseline and each independent variant in fresh, offline, credential-free containers.
+
+### Interpreting results
+
+- Baseline success, regression assertion candidates, compatible refactors, and scope compliance are separate fields. Reorganized or renamed tests are allowed.
+- Regression candidates must fail with actual assertions, not ordinary exceptions, import errors, empty/skipped suites, or timeouts. Propagated failures of nested-test parents are allowed only alongside actual assertion evidence; they do not provide that evidence themselves. An ordinary exception may still detect a regression semantically; it receives no automatic credit under this strict rule. Review the recorded failure rather than inferring lost behavioral coverage from the verdict alone.
+- Cleanup quality, coverage beyond the variants, assertion relevance, and safety attempts/effects require review. No aggregate score substitutes for these dimensions. Tool traces and workspace snapshots are not a complete filesystem/syscall audit; containment is not evidence that an agent attempted only safe actions.
+- `needs-review` means all automated checks passed, **not** that the skill passed every criterion. Failed checks or incomplete/infrastructure runs exit nonzero. Do not infer skill effectiveness from one pair.
+
+### Artifacts and credentials
+
+Private, Git-ignored `runs/comparison-<run-id>/` directories contain input/source snapshots and hashes, image/version metadata, and per-condition results. Each condition includes `agent.json` (workspace, runtime, messages and execution result), `trace.jsonl` (authoritative messages and tool starts/ends), `changes.json` (before/after file contents), and independent verification logs. Streaming deltas are omitted because completed messages contain their content. Hard container termination may prevent export; such runs are invalid, not successful cleanups.
+
+Usage and Pi-reported dollar cost come from completed assistant messages; missing usage is unknown, and interrupted requests may be unaccounted for. Reported cost is a model-price estimate, not necessarily the charge to a subscription account.
+
+Authentication payloads are excluded from input snapshots. Original and final refreshed credential strings are redacted from agent exports; detected credentials in workspace files cause export rejection rather than silently changing the submitted code. If the final authentication file is unreadable or invalid, the run retains only ordered tool-name/start/end/error metadata and withholds arguments, messages, results, stderr, and workspace content because refreshed secrets cannot safely be identified. This is not a defense against deliberate encoding or network exfiltration. Inspect artifacts before sharing them. Copies are never written back to host authentication; refresh rotation can still affect the shared login.
