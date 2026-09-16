@@ -10,7 +10,7 @@ A manually invoked **live iteration** mode: the user watches the page while the 
 
 ## Boundaries
 
-- Treat each adjustment request as authorization to implement it directly, without another plan or implementation confirmation. Follow existing UI conventions for unspecified details.
+- By invoking this skill, the user has authorized direct UI edits. No further confirmation is needed. Follow existing UI conventions for unspecified details.
 - During iteration, do not invoke `/implement`, write tests, or write, run, or recommend test and validation commands, including typecheck, lint, and build. Use the user's live observations as feedback. Development-server process, port, and startup-log checks, along with operations necessary to start the server, are allowed.
 - Limit edits to components, styles, presentation logic, local UI interaction state, and frontend routes and mocks needed for preview. Keep the backend, database, API contracts, and business rules unchanged; mock missing data as described below.
 
