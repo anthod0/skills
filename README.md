@@ -8,23 +8,23 @@ Personal skills for AI agents, includes original skills and adaptations of [Matt
 
 | Skill                                                       | Description                                                                                                                                                           |
 | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`clean-ai-slop`](clean-ai-slop/SKILL.md)                   | Remove AI slop for tests and documents.                                                                                                                               |
-| [`write-intent`](write-intent/SKILL.md)                     | Capture the current discussion as an intent.md. See [Anthropic's AI-Native SDLC Playbook](https://academy.claude.com/courses/ai-native-sdlc-playbook/capture-intent); |
-| [`codebase-design`](codebase-design/SKILL.md)               | Adapted from Matt Pocock, simplified to avoid overengineering.                                                                                                        |
-| [`test-filesystem-safety`](test-filesystem-safety/SKILL.md) | Add safety guardrails to tests that interact with real files.                                                                                                         |
-| [`design-handoff`](design-handoff/SKILL.md)                 | Run `grill-me` through a shared document, handling multiple questions at once without losing focus.                                                                   |
-| [`ui-debug`](ui-debug/SKILL.md)                            | Develop UIs with live feedback.                                                                                      |
-| [`pontia-workflow`](pontia-workflow/SKILL.md)               | Run multi-stage agent workflows orchestrated by Pontia.                                                                                                               |
+| [`clean-ai-slop`](skills/clean-ai-slop/SKILL.md)                   | Remove AI slop for tests and documents.                                                                                                                               |
+| [`write-intent`](skills/write-intent/SKILL.md)                     | Capture the current discussion as an intent.md. See [Anthropic's AI-Native SDLC Playbook](https://academy.claude.com/courses/ai-native-sdlc-playbook/capture-intent); |
+| [`codebase-design`](skills/codebase-design/SKILL.md)               | Adapted from Matt Pocock, simplified to avoid overengineering.                                                                                                        |
+| [`test-filesystem-safety`](skills/test-filesystem-safety/SKILL.md) | Add safety guardrails to tests that interact with real files.                                                                                                         |
+| [`design-handoff`](skills/design-handoff/SKILL.md)                 | Run `grill-me` through a shared document, handling multiple questions at once without losing focus.                                                                   |
+| [`ui-debug`](skills/ui-debug/SKILL.md)                            | Develop UIs with live feedback.                                                                                      |
+| [`pontia-workflow`](skills/pontia-workflow/SKILL.md)               | Run multi-stage agent workflows orchestrated by Pontia.                                                                                                               |
 
 ### Tooling
 
 | Skill                                   | Description                                                               |
 | --------------------------------------- | ------------------------------------------------------------------------- |
-| [`computer-use`](computer-use/SKILL.md) | Standardize desktop browser automation while using the real user profile. |
+| [`computer-use`](skills/computer-use/SKILL.md) | Standardize desktop browser automation while using the real user profile. |
 
 ### Content Creation
 
 | Skill                                               | Description                                                 |
 | --------------------------------------------------- | ----------------------------------------------------------- |
-| [`generate-challenge`](generate-challenge/SKILL.md) | Generate ideas for evaluation-focused social media content. |
-| [`x-post-writer`](x-post-writer/SKILL.md)           | Remove signs of AI writing.                                 |
+| [`generate-challenge`](skills/generate-challenge/SKILL.md) | Generate ideas for evaluation-focused social media content. |
+| [`x-post-writer`](skills/x-post-writer/SKILL.md)           | Remove signs of AI writing.                                 |
