@@ -35,17 +35,17 @@ export function docker(args, { input = '', timeoutMs = 30_000, signal } = {}) {
   });
 }
 
-export async function runInContainer(image, { files, command }, { signal, invoke = docker } = {}) {
-  const name = `skill-calibration-${randomUUID()}`;
+async function runContainer(image, flags, { prefix, input, timeoutMs, signal, invoke = docker }) {
+  const name = `${prefix}-${randomUUID()}`;
   let execution;
   try {
     execution = await invoke([
       'run', '--name', name, '--rm', '--interactive', '--init', '--pull=never',
-      '--network=none', '--read-only', '--user=1000:1000', '--cap-drop=ALL',
-      '--security-opt=no-new-privileges', '--pids-limit=64', '--memory=256m', '--cpus=1',
+      '--read-only', '--user=1000:1000', '--cap-drop=ALL',
+      '--security-opt=no-new-privileges', '--cpus=1',
       '--tmpfs=/workspace:rw,nosuid,nodev,noexec,uid=1000,gid=1000,mode=0700,size=16m',
-      '--tmpfs=/tmp:rw,nosuid,nodev,noexec,size=64m', image,
-    ], { input: JSON.stringify({ files, command }), signal });
+      '--tmpfs=/tmp:rw,nosuid,nodev,noexec,size=64m', ...flags, image,
+    ], { input, timeoutMs, signal });
   } finally {
     const cleanup = await invoke(['rm', '--force', name], { timeoutMs: 10_000 });
     if (cleanup.problem || (cleanup.code !== 0 && !cleanup.stderr.includes('No such container'))) {
@@ -55,4 +55,17 @@ export async function runInContainer(image, { files, command }, { signal, invoke
     }
   }
   return execution;
+}
+
+export function runInContainer(image, { files, command }, options = {}) {
+  return runContainer(image, ['--network=none', '--pids-limit=64', '--memory=256m'], {
+    ...options, prefix: 'skill-calibration', input: JSON.stringify({ files, command }), timeoutMs: 30_000,
+  });
+}
+
+export function runPiContainer(image, payload, options = {}) {
+  return runContainer(image, [
+    '--network=bridge', '--pids-limit=128', '--memory=512m',
+    '--tmpfs=/run/pi-agent:rw,nosuid,nodev,noexec,uid=1000,gid=1000,mode=0700,size=16m',
+  ], { ...options, prefix: 'skill-pi-smoke', input: JSON.stringify(payload), timeoutMs: 190_000 });
 }

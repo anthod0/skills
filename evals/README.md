@@ -1,6 +1,6 @@
 # Skill evaluation cases
 
-`fixtures/` holds the initial repositories given to agents, and `cases/` holds tasks and hidden acceptance criteria. `runner/calibrate.mjs` calibrates test-cleanup cases in Docker; agent evaluation is not yet integrated. Passing calibration only means the materials meet the acceptance expectations, not that the skill is effective for a model.
+`fixtures/` holds the initial repositories given to agents, and `cases/` holds tasks and hidden acceptance criteria. `runner/calibrate.mjs` calibrates test-cleanup cases in Docker; paired agent evaluation is not yet integrated. Passing calibration only means the materials meet the acceptance expectations, not that the skill is effective for a model.
 
 | Case | Fixture | Evaluation goal |
 | --- | --- | --- |
@@ -25,8 +25,8 @@ Do not run fixture code or agent-modified code directly on the host, including b
 
 Shared runner boundaries:
 
-1. Create a disposable, non-privileged container running as a non-root user for each run, and copy the fixture into a writable working directory inside it. Do not expose writable host bind mounts, the real HOME, credential directories, or the Docker socket.
-2. Limit resources and runtime, and disable unnecessary network access. Provide model access through an external proxy or least-privilege credentials; do not mount personal authentication directories.
+1. Create a disposable, non-privileged container running as a non-root user for each run, and copy the fixture into a writable working directory inside it. Do not expose writable host bind mounts, the real HOME, host credential directories, or the Docker socket.
+2. Limit resources and runtime. Pi containers may receive a copy of the selected provider's stored credential in container-local temporary storage and use network access for model calls. Pi and its tools can read that credential; do not mount personal authentication directories or copy unrelated provider credentials. Calibration and acceptance containers remain credential-free and offline.
 3. Supply only the task and skill materials for that condition, preventing global skills/instructions from leaking into the control group. Use synthetic data for all simulated user directories and sentinels.
 4. Record tool operations and export changes from outside the container. Evaluate with hidden oracles; any step that executes submitted code must run in a separate disposable container, never through imports or execution on the host.
 5. Record dangerous attempts, actual file effects, and task completion separately. Dangerous operations blocked by the container do not count as safe agent behavior.
@@ -63,6 +63,22 @@ Calibration uses Node.js 22 containers with host networking for image builds. Te
 Artifacts are stored in `runs/<run-id>/`: `result.json` records individual verdicts and overall status, and `inputs.json` preserves exact inputs and runner source code. Artifacts also include input hashes, image ID, Docker/Node versions, build logs, and per-execution JSONL/stderr logs. Any unmet expectation or infrastructure error causes a nonzero exit; an unavailable Docker daemon also produces an error result. `--check` does not generate run results and cannot replace container calibration.
 
 The documentation-cleanup and filesystem-safety cases are not yet supported by this calibration command. The former requires factual review; the latter requires operation traces and fault injection. Reference patches and variant semantics still require review; the script cannot prove that prompt rewrites produce equivalent outputs from real models.
+
+## Pi container smoke check
+
+Verify native Pi startup, authentication, and its four built-in tools before running evaluation tasks:
+
+```bash
+bun evals/runner/pi-smoke.mjs openai-codex gpt-6-astra
+# Optional third argument: an explicit auth.json path
+node --test evals/runner/*.test.mjs
+```
+
+Requires a stored login for the selected provider. The default credential source is `auth.json` under `PI_CODING_AGENT_DIR`, or `~/.pi/agent` when unset. Only that provider's entry is copied, at runtime through stdin, into writable container-local tmpfs. Host authentication is never written back. OAuth refreshes affect the container's copy; a copied login is not an independent account. Literal API keys are also supported; shell-command and environment-variable key references are not resolved by this check.
+
+The separate [Pi image](runner/Dockerfile.pi) pins Pi's version. It uses native Pi tools and prompt construction without host skills, extensions, settings, or context files. The check calls the selected real model at low reasoning, asks it to write/edit/read a disposable file and run a shell check, and verifies the resulting file. It has a three-minute container lifetime limit and uses Docker bridge networking, **not an endpoint-restricted network**. This is a startup check, not a skill comparison or a test of hostile-code containment.
+
+`runs/pi-smoke-<run-id>/result.json` contains allowlisted runtime and success metadata; `build.log` records the credential-free image build. Raw model/tool output and authentication payloads are not saved, to avoid archiving credentials if the agent prints them. A failure exits nonzero; timeouts, interruptions, and normal completion all trigger cleanup of the run's own container.
 
 ## Future agent evaluation results
 
