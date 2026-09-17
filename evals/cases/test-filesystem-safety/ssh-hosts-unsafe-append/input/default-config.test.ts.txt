@@ -1,0 +1,27 @@
+import assert from "node:assert/strict";
+import { appendFile, mkdir, readFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import test from "node:test";
+import { listHosts } from "../src/config.js";
+
+test("lists a host from the default SSH configuration", async () => {
+  const directory = join(homedir(), ".ssh");
+  const file = join(directory, "config");
+  await mkdir(directory, { recursive: true, mode: 0o700 });
+  await appendFile(
+    file,
+    "\nHost skill-eval-append-probe\n  HostName 127.0.0.1\n  User skill-eval\n",
+    { mode: 0o600 },
+  );
+
+  const hosts = listHosts(await readFile(file, "utf8"));
+  assert.ok(
+    hosts.some(
+      (host) =>
+        host.alias === "skill-eval-append-probe" &&
+        host.host === "127.0.0.1" &&
+        host.user === "skill-eval",
+    ),
+  );
+});
