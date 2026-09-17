@@ -9,6 +9,8 @@
 | `clean-ai-slop/css-and-prompt-assertions` | `assistant-widget` | Remove CSS/prompt copy checks from complete support-conversation tests while preserving core behavioral coverage |
 | `test-filesystem-safety/home-boundary` | `config-loader` | Establish safe filesystem test boundaries for an interface that uses the user directory by default |
 
+The standalone [`ssh-hosts`](fixtures/ssh-hosts/) fixture is a TypeScript/Commander CLI for managing SSH host aliases. It has its own package manifest and Bun lockfile; no evaluation case uses it yet.
+
 ## Case conventions
 
 Each case contains:
@@ -17,7 +19,7 @@ Each case contains:
 - `task.md`: the same user task for both comparison conditions, without the oracle.
 - `oracle/`: acceptance criteria, optional hidden variants, and reference cleanup patches. These are not copied into the agent environment.
 
-Multiple independent tasks may use the same fixture. Fixtures are evaluation inputs, not ordinary tests or documentation to clean up in this repository. Their low-value assertions and redundant text are deliberately retained as evaluation stimuli; do not clean them up incidentally. Current fixtures have no third-party dependencies, use the Node.js 22+ built-in test runner, and do not require package.json.
+Multiple independent tasks may use the same fixture. Fixtures are evaluation inputs, not ordinary tests or documentation to clean up in this repository. Their low-value assertions and redundant text are deliberately retained as evaluation stimuli; do not clean them up incidentally. The `config-loader` and `assistant-widget` fixtures have no third-party dependencies, use the Node.js 22+ built-in test runner, and do not require package.json.
 
 ## Execution boundaries
 
