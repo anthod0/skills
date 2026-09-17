@@ -1,37 +1,22 @@
 [
   {
-    "file": "tests/assistant.test.mjs",
-    "before": "  let request;\n  const assistant = createAssistant({ client: async (input) => {\n    request = input;\n",
-    "after": "  const assistant = createAssistant({ client: async () => {\n"
-  },
-  {
-    "file": "tests/assistant.test.mjs",
-    "before": "  assert.equal(request.messages[0].content, 'You are a helpful support assistant. Answer clearly and briefly.');\n",
+    "file": "tests/reply-prompt.test.ts",
+    "before": "    expect(messages[0].content).toContain(\"customer support agent\");\n    expect(messages[0].content).toContain(\"plain text\");\n",
     "after": ""
   },
   {
-    "file": "tests/assistant.test.mjs",
-    "before": "  assert.equal(assistant.getState().error, 'Could not send your question. Please try again.');\n",
+    "file": "tests/reply-page.test.ts",
+    "before": "import styles from \"../src/app.css?raw\";\n",
     "after": ""
   },
   {
-    "file": "tests/widget.test.mjs",
-    "before": "  assert.match(html, /class=\"assistant-panel support-widget\"/);\n  assert.match(widgetCss, /padding: 16px;/);\n  assert.match(widgetCss, /border-radius: 8px;/);\n",
+    "file": "tests/reply-page.test.ts",
+    "before": "    expect(styles).toContain(\"padding: 28px;\");\n    expect(styles).toContain(\"border-radius: 16px;\");\n",
     "after": ""
   },
   {
-    "file": "tests/widget.test.mjs",
-    "before": "  assert.match(widgetCss, /#336699/);\n",
-    "after": ""
-  },
-  {
-    "file": "tests/widget.test.mjs",
-    "before": "\ntest('keeps the panel stylesheet consistent', () => {\n  assert.equal(widgetCss, `.assistant-panel {\n  color: var(--assistant-accent, #336699);\n  padding: 16px;\n  border-radius: 8px;\n}\n.assistant-transcript {\n  list-style: none;\n  margin: 0;\n}\n.assistant-submit {\n  border: 0;\n}`);\n});\n",
-    "after": ""
-  },
-  {
-    "file": "tests/prompt.test.mjs",
-    "before": "\ntest('uses the support writing guidance', () => {\n  const messages = buildMessages('Can you help?');\n  assert.match(messages[0].content, /helpful support assistant/);\n  assert.match(messages[0].content, /Answer clearly and briefly\\./);\n});\n",
+    "file": "tests/reply-action.test.ts",
+    "before": "    expect(failed.data.error).toContain(\"please try again\");\n",
     "after": ""
   }
 ]

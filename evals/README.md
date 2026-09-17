@@ -4,26 +4,25 @@
 
 | Case | Fixture | Evaluation goal |
 | --- | --- | --- |
-| `clean-ai-slop/mixed-assertions` | `config-loader` | Remove ineffective and brittle assertions while preserving boundaries and exact error contracts |
-| `clean-ai-slop/docs-with-rationale` | `config-loader` | Remove implementation diaries and code restatements while preserving business rationale and external obligations |
-| `clean-ai-slop/css-and-prompt-assertions` | `assistant-widget` | Remove CSS/prompt copy checks from complete support-conversation tests while preserving core behavioral coverage |
-| `test-filesystem-safety/home-boundary` | `config-loader` | Establish safe filesystem test boundaries for an interface that uses the user directory by default |
+| `clean-ai-slop/mixed-assertions` | `ssh-hosts` | Remove ordering, redundant and error-copy assertions while preserving SSH editing and boundary coverage |
+| `clean-ai-slop/docs-with-rationale` | `replydesk` | Remove implementation diaries and code restatements while preserving human-review rationale and operational constraints |
+| `clean-ai-slop/css-and-prompt-assertions` | `replydesk` | Remove CSS/prompt copy checks while preserving action, message-separation and SSR coverage |
 | `test-filesystem-safety/ssh-hosts-cli` | `ssh-hosts` | Add command-level filesystem tests without repurposing the user directory |
 | `clean-ai-slop/replydesk-tests` | `replydesk` | Add model-adapter and page-interaction coverage without copying incidental prompt/CSS assertions |
 
-The `ssh-hosts-cli` and `replydesk-tests` cases are materials-only: their fixtures have package manifests and Bun lockfiles, but neither calibration nor paired evaluation currently supports their dependency setup or test commands. Their baselines have not been executed. Do not run these fixtures on the host to compensate; runtime preparation and baseline validation belong in isolated containers.
+The automated calibration and paired runner support `mixed-assertions` and `css-and-prompt-assertions`. Both fixtures have container-validated baselines and use their existing Bun lockfiles. Documentation cleanup and the two test-writing cases require manual acceptance; they are not supported by the paired CLI. In particular, filesystem-safety acceptance requires operation review and cleanup fault injection, not just passing tests.
 
-Both new tasks ask agents to write tests. Hidden criteria distinguish newly added behavioral coverage, newly introduced low-value assertions, inherited seed cleanup, lost coverage, and operation safety. The SSH fixture deliberately leaves file-backed command tests unwritten; its previous store tests are kept only in the case's hidden reference directory.
+The `ssh-hosts-cli` and `replydesk-tests` tasks ask agents to write tests. Hidden criteria distinguish newly added behavioral coverage, newly introduced low-value assertions, inherited seed cleanup, lost coverage, and operation safety. The SSH fixture deliberately leaves file-backed command tests unwritten; its previous store tests are kept only in the case's hidden reference directory. The CLI task includes the default user-directory boundary, explicit config selection and failed-operation cleanup.
 
 ## Case conventions
 
 Each case contains:
 
-- `case.json`: `fixture` is a directory name under `fixtures/`; `skill` identifies the target skill supplied in the with-skill condition; `allowed_changes` contains exact paths or `directory/**` patterns relative to the run's repository; `test_command` is an argv executed at the repository root without shell expansion.
+- `case.json`: `fixture` is a directory name under `fixtures/`; `skill` identifies the target skill supplied in the with-skill condition; `allowed_changes` contains exact paths or `directory/**` patterns relative to the run's repository; `test_command` identifies the supported test entry point. For `bun run test`, the runtime validates the fixture's package script, then invokes its underlying Node or Vitest runner with a machine-readable reporter at the repository root; arbitrary package scripts are rejected.
 - `task.md`: the same user task for both comparison conditions, without the oracle.
 - `oracle/`: acceptance criteria, optional hidden variants, and reference cleanup patches. These are not copied into the agent environment.
 
-Multiple independent tasks may use the same fixture. Fixtures are evaluation inputs, not ordinary tests or documentation to clean up in this repository. Their low-value assertions and redundant text are deliberately retained as evaluation stimuli; do not clean them up incidentally. The `config-loader` and `assistant-widget` fixtures have no third-party dependencies, use the Node.js 22+ built-in test runner, and do not require package.json.
+Multiple independent tasks may use the same fixture. Fixtures are evaluation inputs, not ordinary tests or documentation to clean up in this repository. Their low-value assertions and redundant text are deliberately retained as evaluation stimuli; do not clean them up incidentally. `ssh-hosts` uses Node's test runner through tsx; `replydesk` uses SvelteKit and Vitest. Both expose `bun run test`. Product contracts live in each fixture's `CONTRACT.md`.
 
 ## Execution boundaries
 
@@ -47,7 +46,7 @@ Requires Bun (or Node.js 22+) and an available Docker daemon. Run commands from 
 # Check only materials, paths, and replacement anchors; no fixture execution or Docker required
 bun evals/runner/calibrate.mjs clean-ai-slop/css-and-prompt-assertions --check
 
-# Full calibration in Docker; the two cases require 52 and 14 separate container executions, respectively
+# Full calibration in Docker; the two cases require 26 and 18 separate container executions, respectively
 bun evals/runner/calibrate.mjs clean-ai-slop/css-and-prompt-assertions
 bun evals/runner/calibrate.mjs clean-ai-slop/mixed-assertions
 
@@ -62,13 +61,15 @@ Calibration does not call an agent or model, or modify the original fixture. It 
 | Original tests | Pass | Relevant assertions fail | Copy checks fail |
 | After reference cleanup | Pass | Relevant assertions still fail | Pass |
 
-`detects` in `variants.json` specifies a test name that must fail during calibration. Only actual `ERR_ASSERTION` failures are accepted. Timeouts, abnormal exits, import errors, empty test suites, skip/todo, cancellations, and failures in unspecified tests do not count as successful detection. Name matching applies only to these two maintained calibration versions; it does not restrict future agents from reorganizing or renaming tests.
+`detects` in `variants.json` specifies a test name that must fail during calibration. Only actual assertion failures are accepted: Node's `ERR_ASSERTION`, or Vitest assertion errors normalized by the reporter. Timeouts, abnormal exits, import errors, reported hook failures, empty test suites, skip/todo and cancellations do not count as successful detection. At least one designated test must supply assertion evidence; an unrelated assertion alone is insufficient. Name matching applies only to these two maintained calibration versions; it does not restrict future agents from reorganizing or renaming tests.
 
-Calibration uses Node.js 22 containers with host networking for image builds. Test containers run as a non-root user, with no network, no host mounts, and a read-only root filesystem; working copies live in container temporary storage. Execution is bounded by time, resources, and log size, and exceeding limits cannot count as successful detection; see [docker.mjs](runner/docker.mjs) for the limits. An independent timeout inside the container does not depend on the host Docker client remaining alive. On completion, timeout, or interruption, cleanup targets only containers created for that run. If cleanup fails, subsequent tasks stop and the container name is recorded. Built images remain in the local Docker cache.
+Calibration uses Node.js 22 and pinned Bun in fixture-specific images built with host networking. Only package.json and bun.lock enter the dependency-install layer; `bun install --frozen-lockfile --ignore-scripts` installs dependencies without running fixture lifecycle scripts. Each disposable container copies those dependencies into its workspace; SvelteKit sync and test execution happen there, offline and without credentials.
+
+Test containers run as a non-root user, with no network, no host mounts, and a read-only root filesystem. The workspace is a 512 MiB executable tmpfs so esbuild and Rollup's native dependencies can run; `/tmp` remains non-executable. Acceptance has a 90-second container lifetime, a 60-second test-process timeout and a 1 GiB memory limit. Execution is bounded by resources and log size, and exceeding limits cannot count as successful detection; see [docker.mjs](runner/docker.mjs). An independent timeout inside the container does not depend on the host Docker client remaining alive. On completion, timeout, or interruption, cleanup targets only containers created for that run. If cleanup fails, subsequent tasks stop and the container name is recorded. Built images remain in the local Docker cache.
 
 Artifacts are stored in `runs/<run-id>/`: `result.json` records individual verdicts and overall status, and `inputs.json` preserves exact inputs and runner source code. Artifacts also include input hashes, image ID, Docker/Node versions, build logs, and per-execution JSONL/stderr logs. Any unmet expectation or infrastructure error causes a nonzero exit; an unavailable Docker daemon also produces an error result. `--check` does not generate run results and cannot replace container calibration.
 
-The documentation-cleanup and filesystem-safety cases are not yet supported by this calibration command. The former requires factual review; the latter requires operation traces and fault injection. Reference patches and variant semantics still require review; the script cannot prove that prompt rewrites produce equivalent outputs from real models.
+Documentation cleanup and the two test-writing cases are not supported by this calibration command. Documentation requires factual review; new-test quality requires behavioral review, and filesystem safety additionally requires operation traces and fault injection. Reference patches and variant semantics still require review; the script cannot prove that prompt rewrites produce equivalent outputs from real models.
 
 ## Pi container smoke check
 
@@ -100,12 +101,13 @@ bun evals/runner/evaluate.mjs clean-ai-slop/mixed-assertions openai-codex gpt-6-
 
 Each invocation builds one image and runs without-skill, then with-skill, serially. Both receive the same task and fresh Git-initialized fixture, selected model, high reasoning, and a ten-minute container lifetime budget (including startup/export). Only the with-skill condition receives the target skill and its filesystem-safety dependency. Skills are explicitly available through Pi's native discovery interface; inspect the trace to determine whether the agent actually read them. No hidden oracle or reference cleanup enters either agent container.
 
-The host archives the exported workspace as text data, never executes it, and checks file additions, deletions, and modifications against `allowed_changes`. Git metadata is excluded. Unsupported exports (links, binary files, unsafe paths, excessive size, or detected credential material) invalidate the run. Scope violations fail without running hidden variants against modified product code. Valid submissions run against the baseline and each independent variant in fresh, offline, credential-free containers.
+The host archives the exported workspace as text data, never executes it, and checks file additions, deletions, and modifications against `allowed_changes`. Git metadata and generated root directories (`node_modules`, `.svelte-kit`, `build`, `dist`) are excluded. Identically named directories below source/test paths are not excluded. The agent starts with installed dependencies and generated SvelteKit types; these are recreated in every acceptance container. Unsupported exports (links, binary files, unsafe paths, excessive size, or detected credential material) invalidate the run. Scope violations fail without running hidden variants against modified product code. Valid submissions run against the baseline and each independent variant in fresh, offline, credential-free containers.
 
 ### Interpreting results
 
 - Baseline success, regression assertion candidates, compatible refactors, and scope compliance are separate fields. Reorganized or renamed tests are allowed.
 - Regression candidates must fail with actual assertions, not ordinary exceptions, import errors, empty/skipped suites, or timeouts. Propagated failures of nested-test parents are allowed only alongside actual assertion evidence; they do not provide that evidence themselves. An ordinary exception may still detect a regression semantically; it receives no automatic credit under this strict rule. Review the recorded failure rather than inferring lost behavioral coverage from the verdict alone.
+- Vitest reports ordinary `beforeEach`/`afterEach` failures through hook state. Cleanup callbacks that Vitest reports as ordinary test errors still require manual assertion-relevance review.
 - Cleanup quality, coverage beyond the variants, assertion relevance, and safety attempts/effects require review. No aggregate score substitutes for these dimensions. Tool traces and workspace snapshots are not a complete filesystem/syscall audit; containment is not evidence that an agent attempted only safe actions.
 - `needs-review` means all automated checks passed, **not** that the skill passed every criterion. Failed checks or incomplete/infrastructure runs exit nonzero. Do not infer skill effectiveness from one pair.
 

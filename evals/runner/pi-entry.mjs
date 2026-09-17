@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { readRegular, readTree, writeTree } from "./files.mjs";
 import { selectAuth, redact } from "./auth.mjs";
 import { serializeAgentOutput } from "./agent-result.mjs";
+import { prepareWorkspace, generatedPaths } from "./workspace.mjs";
 
 async function main() {
   let input = "";
@@ -52,6 +53,7 @@ async function main() {
     if (spawnSync("git", args, { timeout: 5000 }).status !== 0)
       throw new Error("Cannot initialize fixture repository");
   }
+  await prepareWorkspace(files);
   const version = spawnSync("pi", ["--version"], { encoding: "utf8", timeout: 10_000 });
   if (version.status !== 0) throw new Error("Pi version check failed");
   const runtime = {
@@ -139,7 +141,7 @@ async function main() {
   let exported;
   let artifactError;
   try {
-    exported = await readTree("/workspace", { ignoreGit: true });
+    exported = await readTree("/workspace", { ignoreGit: true, excludeRoots: generatedPaths });
     const serialized = JSON.stringify(exported);
     if (redact(serialized, auth, currentAuth) !== serialized)
       throw new Error("Credential in workspace");

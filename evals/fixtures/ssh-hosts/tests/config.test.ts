@@ -16,6 +16,7 @@ Host *
 
 test("lists local aliases without treating defaults or Match sections as hosts", () => {
   const entries = listHosts(homeNetwork + "\nMatch user deploy\n  Port 2222\n");
+  assert.deepEqual(Object.keys(entries[0]), ["alias", "host", "user", "identity"]);
   assert.deepEqual(entries, [
     {
       alias: "nas",
@@ -32,6 +33,7 @@ test("changes the destination without rewriting comments, forwarding or defaults
     alias: "nas",
     options: { host: "192.168.1.21" },
   });
+  assert.ok(updated);
   assert.equal(updated, homeNetwork.replace("192.168.1.20", "192.168.1.21"));
 });
 
@@ -94,6 +96,10 @@ test("rejects collisions and ambiguous targets rather than choosing a block", ()
 });
 
 test("rejects out-of-range ports and values that could insert extra directives", () => {
+  assert.throws(
+    () => updateConfig(homeNetwork, { kind: "set", alias: "nas", options: { port: "0" } }),
+    { message: "Port must be an integer from 1 to 65535." },
+  );
   for (const options of [
     { port: "0" },
     { port: "65536" },
@@ -104,15 +110,14 @@ test("rejects out-of-range ports and values that could insert extra directives",
     assert.throws(() => updateConfig(homeNetwork, { kind: "set", alias: "nas", options }));
   }
   for (const port of ["1", "65535"]) {
-    assert.equal(
-      listHosts(
-        updateConfig(homeNetwork, {
-          kind: "set",
-          alias: "nas",
-          options: { port },
-        }),
-      )[0].port,
-      port,
-    );
+    let updated = "";
+    assert.doesNotThrow(() => {
+      updated = updateConfig(homeNetwork, {
+        kind: "set",
+        alias: "nas",
+        options: { port },
+      });
+    });
+    assert.equal(listHosts(updated)[0].port, port);
   }
 });

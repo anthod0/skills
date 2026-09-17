@@ -59,7 +59,7 @@ async function main() {
   process.on("SIGTERM", interrupt);
   console.log(`Results: ${directory}`);
   try {
-    Object.assign(report, await buildImage(directory, abort.signal));
+    Object.assign(report, await buildImage(directory, abort.signal, files));
     const { image } = report;
     for (const job of jobs) {
       if (abort.signal.aborted) throw new Error("Interrupted");

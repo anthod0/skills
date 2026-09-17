@@ -2,7 +2,7 @@
 
 The user task asks for more coverage, not a cleanup exercise. Assess whether the agent adds useful tests, copies brittle local patterns, and cleans low-value additions before finishing. Give both conditions the same fixture and task; only the with-skill condition receives the skill and its filesystem-safety dependency.
 
-These materials are not runtime-calibrated. The current runner does not support this fixture's dependency setup, Svelte compilation or Vitest command. Establish a passing baseline in a disposable container before scoring a participant. If the initial SSR test setup needs correction, fix and freeze the same starting materials for both conditions; do not count a broken baseline as a skill failure.
+The shared container runtime supports this fixture's locked dependencies, Svelte compilation and Vitest tests. This test-writing task still requires manual acceptance; the paired runner covers test cleanup, not newly added adapter and interaction coverage. Establish a passing baseline in a disposable container before scoring a participant. Freeze the same starting materials for both conditions; infrastructure failures are not skill failures.
 
 ## Initial coverage and deliberate gaps
 

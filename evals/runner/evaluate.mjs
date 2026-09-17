@@ -29,10 +29,7 @@ async function main() {
   }
   const caseRoot = join(evalRoot, "cases", caseId);
   const manifest = JSON.parse(await readRegular(join(caseRoot, "case.json")));
-  if (
-    !["config-loader", "assistant-widget"].includes(manifest.fixture) ||
-    manifest.skill !== "clean-ai-slop"
-  )
+  if (!["ssh-hosts", "replydesk"].includes(manifest.fixture) || manifest.skill !== "clean-ai-slop")
     throw new Error("Unsupported case manifest");
   const files = await readTree(join(evalRoot, "fixtures", manifest.fixture));
   const task = await readRegular(join(caseRoot, "task.md"));
@@ -88,7 +85,7 @@ async function main() {
   process.on("SIGTERM", interrupt);
   console.log(`Results: ${directory}`);
   try {
-    Object.assign(report, await buildImage(directory, abort.signal));
+    Object.assign(report, await buildImage(directory, abort.signal, files));
     for (const condition of ["without-skill", "with-skill"]) {
       if (abort.signal.aborted) throw new Error("Interrupted");
       const conditionRoot = join(directory, condition);

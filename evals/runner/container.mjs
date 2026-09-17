@@ -1,7 +1,8 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { spawn } from "node:child_process";
-import { checkPath, checkCommand } from "./plan.mjs";
+import { readFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { checkCommand } from "./plan.mjs";
+import { writeTree } from "./files.mjs";
+import { prepareWorkspace, testInvocation } from "./workspace.mjs";
 
 let input = "";
 process.stdin.setEncoding("utf8");
@@ -11,25 +12,22 @@ for await (const chunk of process.stdin) {
 }
 const { files, command } = JSON.parse(input);
 checkCommand(command, files);
-for (const [path, content] of Object.entries(files)) {
-  checkPath(path);
-  const destination = join("/workspace", path);
-  await mkdir(dirname(destination), { recursive: true });
-  await writeFile(destination, content, { flag: "wx" });
-}
+await writeTree("/workspace", files);
+await prepareWorkspace(files);
+const [program, ...args] = await testInvocation(files, command);
 console.log(JSON.stringify({ type: "runtime", version: process.version }));
-const child = spawn(
-  process.execPath,
-  ["--test", "--test-reporter=/harness/reporter.mjs", ...command.slice(2)],
-  {
-    cwd: "/workspace",
-    stdio: ["ignore", "inherit", "inherit"],
-  },
-);
-child.on("error", (error) => {
-  console.error(error);
-  process.exitCode = 2;
+const vitest = args.includes("node_modules/vitest/vitest.mjs");
+const child = spawnSync(program, args, {
+  cwd: "/workspace",
+  encoding: "utf8",
+  maxBuffer: 4 * 1024 * 1024,
+  timeout: 60_000,
+  killSignal: "SIGKILL",
 });
-child.on("exit", (code) => {
-  process.exitCode = code ?? 2;
-});
+process.stderr.write(child.stderr ?? "");
+if (vitest) {
+  process.stderr.write(child.stdout ?? "");
+  process.stdout.write(await readFile("/tmp/vitest-events.jsonl", "utf8"));
+} else process.stdout.write(child.stdout ?? "");
+if (child.error) throw child.error;
+process.exitCode = child.status ?? 2;

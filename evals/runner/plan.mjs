@@ -1,7 +1,7 @@
 export function checkPath(path) {
   if (
     typeof path !== "string" ||
-    !/^[\w./-]+$/.test(path) ||
+    !/^[\w.+/-]+$/.test(path) ||
     path.split("/").some((part) => !part || part === "." || part === "..")
   ) {
     throw new Error(`Unsafe relative path: ${path}`);
@@ -44,8 +44,24 @@ export function applyEdits(files, edits) {
 }
 
 export function checkCommand(command, files) {
+  if (JSON.stringify(command) === JSON.stringify(["bun", "run", "test"])) {
+    const manifest = JSON.parse(files["package.json"] ?? "null");
+    const scripts = {
+      "ssh-hosts": "node --import tsx --test tests/*.test.ts",
+      replydesk: "svelte-kit sync && vitest run",
+    };
+    if (
+      !manifest ||
+      !Object.hasOwn(scripts, manifest.name) ||
+      manifest.scripts?.test !== scripts[manifest.name] ||
+      !files["bun.lock"]
+    ) {
+      throw new Error("Unsupported fixture test script or missing lockfile");
+    }
+    return;
+  }
   if (!Array.isArray(command) || command[0] !== "node" || command[1] !== "--test") {
-    throw new Error("Calibration supports Node --test commands only");
+    throw new Error("Unsupported test command");
   }
   for (const argument of command.slice(2)) {
     checkPath(argument);

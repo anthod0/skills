@@ -1,202 +1,122 @@
 [
   {
-    "id": "host-theme-hook-renamed",
-    "detects": ["supports the host theme"],
-    "kind": "regression",
-    "file": "src/styles.mjs",
-    "before": "--assistant-accent",
-    "after": "--assistant-highlight"
-  },
-  {
-    "id": "host-panel-selector-renamed",
-    "detects": ["supports the host theme"],
-    "kind": "regression",
-    "file": "src/styles.mjs",
-    "before": ".assistant-panel",
-    "after": ".support-panel"
-  },
-  {
-    "id": "rendered-theme-class-lost",
-    "detects": ["enables submission when a question is ready"],
-    "kind": "regression",
-    "file": "src/widget.mjs",
-    "before": "class=\"assistant-panel support-widget\"",
-    "after": "class=\"support-widget\""
-  },
-  {
-    "id": "text-color-replaced-by-background",
-    "detects": ["supports the host theme"],
-    "kind": "regression",
-    "file": "src/styles.mjs",
-    "before": "  color: var(",
-    "after": "  background-color: var("
-  },
-  {
-    "id": "user-message-promoted",
-    "detects": ["preserves the user question"],
-    "kind": "regression",
-    "file": "src/prompt.mjs",
-    "before": "{ role: 'user', content: question }",
-    "after": "{ role: 'system', content: question }"
-  },
-  {
     "id": "user-whitespace-trimmed",
-    "detects": ["preserves the user question"],
     "kind": "regression",
-    "file": "src/prompt.mjs",
-    "before": "{ role: 'user', content: question }",
-    "after": "{ role: 'user', content: question.trim() }"
+    "file": "src/lib/server/prompts/reply.ts",
+    "before": "customerMessage: input.message,",
+    "after": "customerMessage: input.message.trim(),",
+    "detects": [
+      "sends the customer text and known facts without losing whitespace or Unicode"
+    ]
   },
   {
-    "id": "user-input-in-system-message",
-    "detects": ["keeps current and historical user content out of the system message"],
+    "id": "user-role-promoted",
     "kind": "regression",
-    "file": "src/prompt.mjs",
-    "before": "content: 'You are a helpful support assistant. Answer clearly and briefly.',",
-    "after": "content: 'You are a helpful support assistant. Answer clearly and briefly.' + question,"
+    "file": "src/lib/server/prompts/reply.ts",
+    "before": "role: \"user\" as const,",
+    "after": "role: \"system\" as const,",
+    "detects": [
+      "sends the customer text and known facts without losing whitespace or Unicode"
+    ]
   },
   {
-    "id": "system-instructions-emptied",
-    "detects": ["starts a conversation with system instructions and a user question"],
+    "id": "user-input-in-system",
     "kind": "regression",
-    "file": "src/prompt.mjs",
-    "before": "You are a helpful support assistant. Answer clearly and briefly.",
-    "after": ""
+    "file": "src/lib/server/prompts/reply.ts",
+    "before": "`${instructions}\\n${writingStyle[input.tone]}`",
+    "after": "`${instructions}\\n${writingStyle[input.tone]}\\n${input.message}`",
+    "detects": [
+      "keeps customer instructions and agent notes out of system guidance"
+    ]
   },
   {
-    "id": "historical-answer-role-lost",
-    "detects": ["includes complete historical turns before the current question"],
+    "id": "system-guidance-empty",
     "kind": "regression",
-    "file": "src/prompt.mjs",
-    "before": "{ role: 'assistant', content: turn.answer }",
-    "after": "{ role: 'user', content: turn.answer }"
+    "file": "src/lib/server/prompts/reply.ts",
+    "before": "`${instructions}\\n${writingStyle[input.tone]}`",
+    "after": "\"\"",
+    "detects": [
+      "sends the customer text and known facts without losing whitespace or Unicode"
+    ]
   },
   {
-    "id": "duplicate-submissions-allowed",
-    "detects": ["blocks duplicate submissions while a request is pending"],
+    "id": "failed-request-erases-input",
     "kind": "regression",
-    "file": "src/assistant.mjs",
-    "before": "      if (state.status === 'sending') return false;",
-    "after": ""
+    "file": "src/routes/+page.server.ts",
+    "before": "return fail(502, {\n        values,",
+    "after": "return fail(502, {\n        values: { message: \"\", context: \"\", tone: values.tone },",
+    "detects": [
+      "preserves input after a provider failure and allows a new attempt"
+    ]
   },
   {
-    "id": "blank-questions-sent",
-    "detects": ["does not submit empty questions"],
+    "id": "private-error-disclosed",
     "kind": "regression",
-    "file": "src/assistant.mjs",
-    "before": "if (typeof question !== 'string' || !question.trim()) return false;",
-    "after": "if (typeof question !== 'string') return false;"
+    "file": "src/routes/+page.server.ts",
+    "before": "error: \"We couldn’t generate a reply. Your notes are still here — please try again.\",",
+    "after": "error: \"Provider timeout: private diagnostic — please try again\",",
+    "detects": [
+      "preserves input after a provider failure and allows a new attempt"
+    ]
   },
   {
-    "id": "retry-after-error-blocked",
-    "detects": ["can retry after a transport failure"],
+    "id": "draft-rendered-as-html",
     "kind": "regression",
-    "file": "src/assistant.mjs",
-    "before": "if (state.status === 'sending') return false;",
-    "after": "if (state.status !== 'idle') return false;"
+    "file": "src/routes/+page.svelte",
+    "before": "<div class=\"reply-text\">{draft}</div>",
+    "after": "<div class=\"reply-text\">{@html draft}</div>",
+    "detects": [
+      "shows a returned draft as text and makes it available to copy"
+    ]
   },
   {
-    "id": "snapshot-shares-live-history",
-    "detects": ["returned state cannot change later submissions or citations"],
+    "id": "copy-without-draft-enabled",
     "kind": "regression",
-    "file": "src/assistant.mjs",
-    "before": "return structuredClone(state);",
-    "after": "return { ...state };"
-  },
-  {
-    "id": "failed-request-erases-history",
-    "detects": ["does not add invalid responses to an existing conversation"],
-    "kind": "regression",
-    "file": "src/assistant.mjs",
-    "before": "state = { ...state, status: 'error', error:",
-    "after": "state = { ...state, turns: [], status: 'error', error:"
-  },
-  {
-    "id": "history-retains-oldest-turns",
-    "detects": ["sends only retained history in chronological order"],
-    "kind": "regression",
-    "file": "src/conversation.mjs",
-    "before": ".slice(-maxTurns)",
-    "after": ".slice(0, maxTurns)"
-  },
-  {
-    "id": "blank-answer-accepted",
-    "detects": ["rejects absent and empty answers"],
-    "kind": "regression",
-    "file": "src/response.mjs",
-    "before": "!value.answer.trim()",
-    "after": "false"
-  },
-  {
-    "id": "executable-citation-accepted",
-    "detects": ["discards unusable or executable links without losing valid sources"],
-    "kind": "regression",
-    "file": "src/response.mjs",
-    "before": "    if (!['https:', 'http:'].includes(url.protocol)) continue;",
-    "after": ""
-  },
-  {
-    "id": "pending-submit-enabled",
-    "detects": ["marks pending requests busy and disables the submit button"],
-    "kind": "regression",
-    "file": "src/widget.mjs",
-    "before": "const disabled = busy || !draft.trim();",
-    "after": "const disabled = !draft.trim();"
-  },
-  {
-    "id": "transcript-escaping-lost",
-    "detects": ["escapes questions and answers when rendering the transcript"],
-    "kind": "regression",
-    "file": "src/widget.mjs",
-    "before": "text.replace(/[&<>\"']/g,",
-    "after": "text.replace(/\\u0000/g,"
-  },
-  {
-    "id": "css-declarations-reordered",
-    "detects": ["keeps the panel stylesheet consistent"],
-    "kind": "refactor",
-    "file": "src/styles.mjs",
-    "before": "  padding: 16px;\n  border-radius: 8px;",
-    "after": "  border-radius: 8px;\n  padding: 16px;"
-  },
-  {
-    "id": "css-equivalent-color-notation",
-    "detects": ["supports the host theme"],
-    "kind": "refactor",
-    "file": "src/styles.mjs",
-    "before": "#336699",
-    "after": "rgb(51, 102, 153)"
+    "file": "src/routes/+page.svelte",
+    "before": "disabled={!draft || pending}",
+    "after": "disabled={pending}",
+    "detects": [
+      "offers a composer before there is a draft to copy"
+    ]
   },
   {
     "id": "css-declaration-whitespace",
-    "detects": ["keeps the panel stylesheet consistent"],
     "kind": "refactor",
-    "file": "src/styles.mjs",
-    "before": "  color: var(--assistant-accent, #336699);",
-    "after": "  color : var( --assistant-accent , #336699 );"
+    "file": "src/app.css",
+    "before": "  padding: 28px;",
+    "after": "  padding : 28px ;",
+    "detects": [
+      "offers a composer before there is a draft to copy"
+    ]
   },
   {
-    "id": "panel-class-order-changed",
-    "detects": ["enables submission when a question is ready"],
+    "id": "css-equivalent-radius",
     "kind": "refactor",
-    "file": "src/widget.mjs",
-    "before": "class=\"assistant-panel support-widget\"",
-    "after": "class=\"support-widget assistant-panel\""
-  },
-  {
-    "id": "failure-notice-reworded",
-    "detects": ["can retry after a transport failure"],
-    "kind": "refactor",
-    "file": "src/assistant.mjs",
-    "before": "Could not send your question. Please try again.",
-    "after": "Support is temporarily unavailable. You can retry your question."
+    "file": "src/app.css",
+    "before": "  border-radius: 16px;",
+    "after": "  border-radius: 16px 16px;",
+    "detects": [
+      "offers a composer before there is a draft to copy"
+    ]
   },
   {
     "id": "system-guidance-reworded",
-    "detects": ["uses the support writing guidance"],
     "kind": "refactor",
-    "file": "src/prompt.mjs",
-    "before": "You are a helpful support assistant. Answer clearly and briefly.",
-    "after": "Assist the customer with support questions. Keep replies concise and clear."
+    "file": "src/lib/server/prompts/reply.ts",
+    "before": "You help a customer support agent write a reply for review.",
+    "after": "Help the support team draft a response for human review.",
+    "detects": [
+      "sends the customer text and known facts without losing whitespace or Unicode"
+    ]
+  },
+  {
+    "id": "failure-notice-reworded",
+    "kind": "refactor",
+    "file": "src/routes/+page.server.ts",
+    "before": "We couldn’t generate a reply. Your notes are still here — please try again.",
+    "after": "Draft generation failed. Your input is retained; you can retry.",
+    "detects": [
+      "preserves input after a provider failure and allows a new attempt"
+    ]
   }
 ]

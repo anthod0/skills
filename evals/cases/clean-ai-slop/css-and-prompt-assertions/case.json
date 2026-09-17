@@ -1,6 +1,12 @@
 {
-  "fixture": "assistant-widget",
+  "fixture": "replydesk",
   "skill": "clean-ai-slop",
-  "allowed_changes": ["tests/**"],
-  "test_command": ["node", "--test"]
+  "allowed_changes": [
+    "tests/**"
+  ],
+  "test_command": [
+    "bun",
+    "run",
+    "test"
+  ]
 }

@@ -45,19 +45,21 @@ export async function readRegular(path) {
   }
 }
 
-export async function readTree(root, { ignoreGit = false } = {}) {
+export async function readTree(root, { ignoreGit = false, excludeRoots = [] } = {}) {
   const files = Object.create(null);
   let entries = 0;
   let size = 0;
   async function visit(directory, prefix = "") {
     if (!(await lstat(directory)).isDirectory()) throw new Error("Expected directory, not symlink");
     for (const name of (await readdir(directory)).sort()) {
-      if (ignoreGit && !prefix && name === ".git") continue;
+      if (!prefix && ignoreGit && name === ".git") continue;
+      const path = join(directory, name);
+      const info = await lstat(path);
+      if (!prefix && excludeRoots.includes(name) && info.isDirectory()) continue;
       if (++entries > 512) throw new Error("Too many tree entries");
       const relative = prefix + name;
       checkPath(relative);
-      const path = join(directory, name);
-      if ((await lstat(path)).isDirectory()) await visit(path, relative + "/");
+      if (info.isDirectory()) await visit(path, relative + "/");
       else {
         files[relative] = await readRegular(path);
         size += Buffer.byteLength(files[relative]);

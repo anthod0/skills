@@ -1,6 +1,12 @@
 {
-  "fixture": "config-loader",
+  "fixture": "ssh-hosts",
   "skill": "clean-ai-slop",
-  "allowed_changes": ["tests/**"],
-  "test_command": ["node", "--test"]
+  "allowed_changes": [
+    "tests/**"
+  ],
+  "test_command": [
+    "bun",
+    "run",
+    "test"
+  ]
 }

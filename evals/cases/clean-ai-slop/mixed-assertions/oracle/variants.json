@@ -1,50 +1,82 @@
 [
   {
-    "id": "zero-retries-defaulted",
-    "detects": ["accepts disabling retries"],
+    "id": "maximum-port-rejected",
     "kind": "regression",
-    "file": "src/config.mjs",
-    "before": "const retries = input.retries ?? 3;",
-    "after": "const retries = input.retries || 3;"
+    "file": "src/config.ts",
+    "before": "Number(value) > 65535",
+    "after": "Number(value) >= 65535",
+    "detects": [
+      "rejects out-of-range ports and values that could insert extra directives"
+    ]
   },
   {
-    "id": "maximum-rejected",
-    "detects": ["accepts the maximum retry budget"],
+    "id": "invalid-port-accepted",
     "kind": "regression",
-    "file": "src/config.mjs",
-    "before": "retries > 5",
-    "after": "retries >= 5"
+    "file": "src/config.ts",
+    "before": "Number(value) < 1",
+    "after": "Number(value) < 0",
+    "detects": [
+      "rejects out-of-range ports and values that could insert extra directives"
+    ]
   },
   {
-    "id": "invalid-budgets-accepted",
-    "detects": ["rejects unsupported retry budgets"],
+    "id": "case-insensitive-collision-lost",
     "kind": "regression",
-    "file": "src/config.mjs",
-    "before": "    throw new Error('E_RETRY_RANGE');",
-    "after": "    return { endpoint: input.endpoint, retries };"
+    "file": "src/config.ts",
+    "before": "name.toLowerCase() === alias.toLowerCase()",
+    "after": "name === alias",
+    "detects": [
+      "rejects collisions and ambiguous targets rather than choosing a block"
+    ]
   },
   {
-    "id": "launcher-error-token-changed",
-    "detects": ["rejects unsupported retry budgets"],
+    "id": "host-after-defaults",
     "kind": "regression",
-    "file": "src/config.mjs",
-    "before": "new Error('E_RETRY_RANGE')",
-    "after": "new Error('Retry count is invalid')"
+    "file": "src/config.ts",
+    "before": "lines.splice(defaults.start, 0, block + newline);",
+    "after": "lines.push(block + newline);",
+    "detects": [
+      "adds a host before wildcard defaults so its options take precedence"
+    ]
   },
   {
-    "id": "syntax-error-type-lost",
-    "detects": ["rejects malformed configuration"],
+    "id": "inline-comment-lost",
     "kind": "regression",
-    "file": "src/config.mjs",
-    "before": "  const input = JSON.parse(text);",
-    "after": "  let input;\n  try {\n    input = JSON.parse(text);\n  } catch (error) {\n    throw new Error(error.message);\n  }"
+    "file": "src/config.ts",
+    "before": "const suffix = rows[index].comment ? ` ${rows[index].comment}` : \"\";",
+    "after": "const suffix = \"\";",
+    "detects": [
+      "updates equals syntax and retains inline comments and CRLF endings"
+    ]
+  },
+  {
+    "id": "identity-quotes-retained",
+    "kind": "regression",
+    "file": "src/config.ts",
+    "before": "= unquote(row.value);",
+    "after": "= row.value;",
+    "detects": [
+      "lists local aliases without treating defaults or Match sections as hosts"
+    ]
   },
   {
     "id": "property-construction-reordered",
-    "detects": ["loads an explicit retry configuration"],
     "kind": "refactor",
-    "file": "src/config.mjs",
-    "before": "return { endpoint: input.endpoint, retries };",
-    "after": "return { retries, endpoint: input.endpoint };"
+    "file": "src/config.ts",
+    "before": "return [entry];",
+    "after": "const { alias, ...options } = entry;\n    return [{ ...options, alias }];",
+    "detects": [
+      "lists local aliases without treating defaults or Match sections as hosts"
+    ]
+  },
+  {
+    "id": "port-error-reworded",
+    "kind": "refactor",
+    "file": "src/config.ts",
+    "before": "Port must be an integer from 1 to 65535.",
+    "after": "Choose a whole-number port between 1 and 65535.",
+    "detects": [
+      "rejects out-of-range ports and values that could insert extra directives"
+    ]
   }
 ]

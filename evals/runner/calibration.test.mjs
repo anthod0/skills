@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { applyEdits, createPlan } from "./plan.mjs";
+import { applyEdits, createPlan, checkCommand, checkPath } from "./plan.mjs";
 import { assess } from "./result.mjs";
 import reporter from "./reporter.mjs";
 import { runInContainer } from "./docker.mjs";
@@ -101,6 +101,26 @@ test("refuses path escapes, production cleanup, test mutants, and arbitrary Node
     () => createPlan(files, [...variants, variants[0]], reference, ["node", "--test"]),
     /Invalid variant/,
   );
+});
+
+test("locked fixture commands are accepted without permitting arbitrary package scripts", () => {
+  for (const [name, script] of [
+    ["ssh-hosts", "node --import tsx --test tests/*.test.ts"],
+    ["replydesk", "svelte-kit sync && vitest run"],
+  ]) {
+    const inputs = {
+      "package.json": JSON.stringify({ name, scripts: { test: script } }),
+      "bun.lock": "locked",
+    };
+    assert.doesNotThrow(() => checkCommand(["bun", "run", "test"], inputs));
+    assert.throws(() => checkCommand(["bun", "run", "test", "--update"], inputs));
+    assert.throws(() => checkCommand(["bun", "run", "test"], { ...inputs, "bun.lock": "" }));
+    inputs["package.json"] = JSON.stringify({ name, scripts: { test: "arbitrary-command" } });
+    assert.throws(() => checkCommand(["bun", "run", "test"], inputs));
+  }
+  assert.doesNotThrow(() => checkPath("src/routes/+page.svelte"));
+  assert.throws(() => checkPath("src/routes/../outside"));
+  assert.throws(() => checkPath("src/routes/$(command)"));
 });
 
 test("container runs use isolation and remove only their own container after timeout", async () => {

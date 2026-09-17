@@ -6,6 +6,7 @@ import { join, resolve, relative, sep } from "node:path";
 import { changesBetween, checkScope, createSubmissionPlan } from "./submission.mjs";
 import { readTree, checkFiles, writeTree } from "./files.mjs";
 import { assess } from "./result.mjs";
+import { generatedPaths } from "./workspace.mjs";
 
 const original = { "src/a.mjs": "const value = 1;", "tests/old.test.mjs": "old checks" };
 const submitted = { "src/a.mjs": original["src/a.mjs"], "tests/new.test.mjs": "behavior checks" };
@@ -147,6 +148,20 @@ test("workspace export rejects escapes, non-text files, links, and oversized fil
     assert.deepEqual(Object.keys(await readTree(testRoot, { ignoreGit: true })), [
       "tests/example.mjs",
     ]);
+    await mkdir(join(testRoot, "node_modules"));
+    await symlink(join(testRoot, "tests/example.mjs"), join(testRoot, "node_modules/link"));
+    await writeTree(testRoot, { "tests/dist/source.ts": "still source" });
+    assert.deepEqual(
+      Object.keys(await readTree(testRoot, { ignoreGit: true, excludeRoots: generatedPaths })),
+      ["tests/dist/source.ts", "tests/example.mjs"],
+    );
+    await symlink(join(testRoot, "tests"), join(testRoot, "build"));
+    await assert.rejects(readTree(testRoot, { ignoreGit: true, excludeRoots: generatedPaths }));
+    await unlink(join(testRoot, "build"));
+    await writeFile(join(testRoot, "dist"), "not a generated directory");
+    const exported = await readTree(testRoot, { ignoreGit: true, excludeRoots: generatedPaths });
+    assert.equal(exported.dist, "not a generated directory");
+    assert.equal(checkScope(changesBetween({}, exported), ["tests/**"]).ok, false);
   } finally {
     const belowTemporary = relative(temporaryBase, testRoot);
     assert.ok(

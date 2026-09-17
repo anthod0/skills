@@ -30,7 +30,7 @@ describe("reply submission", () => {
   ])("rejects invalid input before contacting the model", async (values) => {
     const result = await submit(values);
     expect(isActionFailure(result)).toBe(true);
-    if (!isActionFailure(result)) throw new Error("Expected a validation failure");
+    if (!("status" in result)) throw new Error("Expected a validation failure");
     expect(result.status).toBe(400);
     expect(Object.keys(result.data.errors).length).toBeGreaterThan(0);
     expect(generateReply).not.toHaveBeenCalled();
@@ -41,7 +41,7 @@ describe("reply submission", () => {
     vi.mocked(generateReply).mockResolvedValueOnce(draft);
     const result = await submit();
     expect(isActionFailure(result)).toBe(false);
-    if (isActionFailure(result)) throw new Error("Expected a successful draft");
+    if ("status" in result) throw new Error("Expected a successful draft");
     expect(result.draft).toBe(draft);
     expect(result.values).toEqual(fields);
   });
@@ -52,7 +52,7 @@ describe("reply submission", () => {
       .mockResolvedValueOnce("Your parcel is expected on Friday.");
     const failed = await submit();
     expect(isActionFailure(failed)).toBe(true);
-    if (!isActionFailure(failed)) throw new Error("Expected a provider failure");
+    if (!("status" in failed)) throw new Error("Expected a provider failure");
     expect(failed.status).toBe(502);
     expect(failed.data.values).toEqual(fields);
     expect(failed.data.error).toBeTruthy();
@@ -61,7 +61,7 @@ describe("reply submission", () => {
 
     const retried = await submit();
     expect(isActionFailure(retried)).toBe(false);
-    if (isActionFailure(retried)) throw new Error("Expected the retry to succeed");
+    if ("status" in retried) throw new Error("Expected the retry to succeed");
     expect(retried.draft).toBe("Your parcel is expected on Friday.");
     expect(retried.error).toBeNull();
   });

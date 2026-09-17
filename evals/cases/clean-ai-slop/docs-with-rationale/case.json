@@ -1,6 +1,12 @@
 {
-  "fixture": "config-loader",
+  "fixture": "replydesk",
   "skill": "clean-ai-slop",
-  "allowed_changes": ["README.md"],
-  "test_command": ["node", "--test", "tests/config.test.mjs"]
+  "allowed_changes": [
+    "README.md"
+  ],
+  "test_command": [
+    "bun",
+    "run",
+    "test"
+  ]
 }

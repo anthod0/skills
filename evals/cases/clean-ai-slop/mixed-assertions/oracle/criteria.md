@@ -1,29 +1,30 @@
-# Mixed-assertion acceptance criteria
+# SSH test-cleanup acceptance
 
-Tests must pass against the original implementation, without achieving this by skipping tests or deleting all tests.
+Assess supported behavior, not test count or matching the reference patch. The task permits changes only under `tests/`. Product behavior and CONTRACT.md must remain unchanged.
 
-## Remove
+## Remove low-value assertions
 
-- The ordering assertion on `Object.keys(config)`: the contract explicitly does not guarantee property enumeration order.
-- The always-true harness test.
-- The assertion that `retryWizard` does not exist: it has no basis in supported behavior.
+- `Object.keys(entries[0])` fixes incidental result property order; `deepEqual(entries, ...)` already checks the values.
+- `assert.ok(updated)` adds nothing to the exact, contract-relevant assertion that only the destination changed.
+- The extra zero-port assertion fixes the exact error sentence and duplicates invalid-port rejection in the following loop. Error wording is not a public contract.
 
-## Preserve these signals
+Removing a whole mixed-signal test, deleting its meaningful assertions, or relaxing the wording check to a regex of the same words is not cleanup.
 
-- Returned values for explicit endpoint and retries inputs; removing the ordering assertion must not also remove this behavioral oracle.
-- Missing and null retries use the default value.
-- Both boundaries, 0 and 5. These are not duplicate coverage of the ordinary input 2.
-- Negative, above-limit, fractional, and string retries are rejected.
-- The error message is exactly `E_RETRY_RANGE`: this is an external launcher contract, not ordinary copy.
-- Invalid JSON is rejected with a `SyntaxError`; `assert.throws` without a type constraint does not preserve this contract.
+## Preserve behavioral signal
 
-Tests may be reorganized or merged; score by signals, not test names or counts. Tests must remain discoverable by the case's `node --test` command. Product code and documentation must not change.
+- Listing reports single-alias blocks and excludes wildcard/Match sections; identity quotes are decoded.
+- Editing preserves unrelated comments, forwarding options, neighbours, inline comments and CRLF endings. Exact bytes here protect the documented preservation contract, not incidental formatting.
+- New specific hosts precede wildcard defaults so their values take precedence.
+- Rename/removal leave unrelated entries intact.
+- Case-insensitive collisions and ambiguous targets are rejected.
+- Invalid ports and directive-injection values are rejected; both valid port endpoints are accepted and retained.
 
-## Hidden variants
+The valid-port test explicitly asserts successful execution as well as returned contents, so an exception at a valid boundary supplies assertion evidence to the strict runner.
 
-Apply each variant in `variants.json` independently to a fresh copy of the cleaned-up version. The target file must contain `before` exactly once; otherwise, report an evaluator error, not an agent failure. Replace it with `after`, then run the case's test command. Do not accumulate variants.
+## Hidden probes
 
-- regression: must produce an assertion failure related to the specified behavior. Syntax errors, import failures, and test discovery failures do not count as successful detection.
-- refactor: must still pass; the original fixture should fail its ordering assertion, which serves to calibrate the case.
+`variants.json` applies each mutation independently. Regression variants cover port boundaries, collisions, precedence, inline comments and identity decoding. Refactors change object construction order or rephrase the port error while preserving its meaning.
 
-Record low-value test removal, preservation of behavioral signals, regression detection, and passing equivalent refactors separately. Do not use an aggregate pass rate to hide incorrectly removed coverage.
+Both original and reference suites must pass baseline and detect each regression through relevant assertions. Original tests reject the refactors through the seeded assertions; the reference cleanup accepts them. `reference.json` is one attainable answer, not a mandated edit list or test layout.
+
+Record baseline success, regression coverage, compatible maintenance, cleanup quality, scope compliance and untested behavior separately. Calibration does not prove exhaustive coverage or skill effectiveness.

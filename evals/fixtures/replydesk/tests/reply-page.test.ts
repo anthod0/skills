@@ -26,7 +26,7 @@ describe("reply workspace", () => {
     const html = renderPage();
     expect(html).toMatch(/<form\b[^>]*method="POST"/i);
     expect(html).toMatch(/<textarea\b[^>]*name="message"[^>]*required/);
-    expect(html).toMatch(/<button\b[^>]*type="button"[^>]*\sdisabled(?:\s|>)/);
+    expect(html).toMatch(/<button\b[^>]*type="button"[^>]*\sdisabled(?:="")?(?:\s|>)/);
     expect(styles).toContain("padding: 28px;");
     expect(styles).toContain("border-radius: 16px;");
   });
@@ -37,6 +37,6 @@ describe("reply workspace", () => {
     expect(html).toContain("&amp; thanks");
     expect(html).not.toContain("<img");
     expect(html).toMatch(/<button\b[^>]*type="button"/);
-    expect(html).not.toMatch(/<button\b[^>]*type="button"[^>]*\sdisabled(?:\s|>)/);
+    expect(html).not.toMatch(/<button\b[^>]*type="button"[^>]*\sdisabled(?:="")?(?:\s|>)/);
   });
 });

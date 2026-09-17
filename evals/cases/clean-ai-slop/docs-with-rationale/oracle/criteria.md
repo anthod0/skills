@@ -1,29 +1,27 @@
-# Documentation acceptance criteria
+# Replydesk documentation acceptance
 
-Evaluate meaning, without requiring specific headings, phrasing, or length. Use blind human review for the first round: reviewers must not see labels indicating whether a run used the skill.
+Evaluate meaning without prescribing headings, wording or length. Use blind human review: reviewers must not see whether a run used the skill. Only README.md may change.
 
-## Facts that must be preserved
+## Preserve
 
-- The module loads configuration for the Dispatch batch job launcher.
-- The limit of five retries comes from the delivery partner's integration agreement, not a technical implementation limit.
-- Jobs without an idempotency key must disable retries to avoid duplicate delivery.
-- Changing this policy requires approval from the partner's operations team.
-- Node.js 22+, no third-party dependencies, a valid test command, and a valid reference to CONTRACT.md.
+- Replydesk drafts replies for human review; agents remain responsible for customer commitments, especially dates and remedies. Known facts ground the draft; internal notes are not necessarily appropriate to quote.
+- Submitted messages and notes are sent to OpenAI. Use sample data for local trials and review text before sending.
+- This workspace has no authentication or request quotas: keep it local or behind team access controls rather than exposing it directly to the public internet.
+- Development prerequisites and valid install, test, check, build and start instructions. Preserve how to supply the API key, optional model and production ORIGIN, including the distinction that production does not load `.env` automatically.
+- Ordinary server-rendered submissions work without JavaScript; in-place feedback and clipboard access need JavaScript. Drafts are not saved across reloads.
+- A valid reference to CONTRACT.md and the writing-guidance source.
 
-The first three business facts and the approval obligation cannot be inferred from the implementation alone. They must not be removed simply because they are absent from the code.
+Human responsibility, appropriate treatment of internal notes and deployment advice contribute rationale not recoverable from code alone. Do not discard them simply because they are not implementation details.
 
 ## Remove
 
-- Implementation descriptions such as private variables, step-by-step call flows, and object construction order.
-- Repeated inventories of defaults, ranges, and return fields; "five retries" may remain where needed to explain the business rationale.
-- Development chronology and completion records.
-- The retry wizard proposal and residual statements that it "no longer exists."
-- Repeated summaries.
+- The Draft generation paragraph that walks through FormData fields, validation, return values and pending flags.
+- The Development notes chronology and completion statements.
+- The auto-send queue proposal and its negative residue.
+- The repeated concluding product summary.
 
 ## Do not add
 
-- Cleanup ledgers, completion reports, or deletion notices.
-- Unsupported safety guarantees, such as "zero retries guarantees exactly-once delivery."
-- Speculation about partner policy or approval processes.
+Cleanup ledgers, completion reports, invented retention guarantees, claims that drafts cannot hallucinate, or promises that the application enforces access controls. Do not turn the deleted queue story into another notice of its absence.
 
-Record fact preservation, low-value content removal, unsupported additions, and change scope separately. Deleting the entire README or merely shortening it does not count as success. Check that link targets still exist; this fixture has no dedicated documentation check command.
+Record fact preservation, low-value text removal, unsupported additions and scope independently. Check remaining paths and commands against the fixture. The ordinary tests do not validate documentation quality; no automated documentation oracle is provided.

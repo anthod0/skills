@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { readTree, writeTree } from "./files.mjs";
 
 export function docker(args, { input = "", timeoutMs = 30_000, signal } = {}) {
   if (signal?.aborted)
@@ -65,7 +66,7 @@ async function runContainer(
         "--cap-drop=ALL",
         "--security-opt=no-new-privileges",
         "--cpus=1",
-        "--tmpfs=/workspace:rw,nosuid,nodev,noexec,uid=1000,gid=1000,mode=0700,size=16m",
+        "--tmpfs=/workspace:rw,nosuid,nodev,exec,uid=1000,gid=1000,mode=0700,size=512m",
         "--tmpfs=/tmp:rw,nosuid,nodev,noexec,size=64m",
         ...flags,
         image,
@@ -90,11 +91,11 @@ async function runContainer(
 }
 
 export function runInContainer(image, { files, command }, options = {}) {
-  return runContainer(image, ["--network=none", "--pids-limit=64", "--memory=256m"], {
+  return runContainer(image, ["--network=none", "--pids-limit=128", "--memory=1g"], {
     ...options,
     prefix: "skill-calibration",
     input: JSON.stringify({ files, command }),
-    timeoutMs: 30_000,
+    timeoutMs: 100_000,
   });
 }
 
@@ -105,7 +106,7 @@ export function runPiContainer(image, payload, options = {}) {
     [
       "--network=bridge",
       "--pids-limit=128",
-      "--memory=512m",
+      "--memory=1g",
       "--tmpfs=/run/pi-agent:rw,nosuid,nodev,noexec,uid=1000,gid=1000,mode=0700,size=16m",
     ],
     {
@@ -118,16 +119,24 @@ export function runPiContainer(image, payload, options = {}) {
   );
 }
 
-export async function buildImage(directory, signal) {
+export async function buildImage(directory, signal, files) {
   const preflight = await docker(["info", "--format", "{{.ServerVersion}}"], { signal });
   if (preflight.problem || preflight.code !== 0) throw new Error("Docker unavailable");
+  const context = join(directory, "build-context");
+  const sources = await readTree(fileURLToPath(new URL(".", import.meta.url)));
+  if (files) {
+    for (const name of ["package.json", "bun.lock"]) sources[`dependencies/${name}`] = files[name];
+  }
+  await writeTree(context, sources);
   const build = await docker(
     [
       "build",
       "--network=host",
+      "--target",
+      files ? "fixture" : "base",
       "--iidfile",
       join(directory, "image-id"),
-      fileURLToPath(new URL(".", import.meta.url)),
+      context,
     ],
     { timeoutMs: 300_000, signal },
   );
