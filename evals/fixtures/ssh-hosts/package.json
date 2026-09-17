@@ -2,13 +2,10 @@
   "name": "ssh-hosts",
   "version": "0.1.0",
   "description": "Keep SSH host aliases in order without rewriting the rest of your config.",
-  "type": "module",
   "bin": {
     "ssh-hosts": "dist/cli.js"
   },
-  "engines": {
-    "node": ">=22"
-  },
+  "type": "module",
   "scripts": {
     "dev": "node --import tsx src/cli.ts",
     "build": "tsc",
@@ -22,5 +19,8 @@
     "@types/node": "^22",
     "tsx": "^4",
     "typescript": "~5.9"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

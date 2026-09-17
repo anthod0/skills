@@ -1,11 +1,9 @@
 {
   "name": "replydesk",
   "version": "0.1.0",
+  "private": true,
   "description": "Turn customer messages and known facts into a reply worth sending.",
   "type": "module",
-  "engines": {
-    "node": ">=22.12"
-  },
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
@@ -15,7 +13,6 @@
     "test": "svelte-kit sync && vitest run",
     "prepare": "svelte-kit sync"
   },
-  "private": true,
   "dependencies": {
     "@sveltejs/kit": "^2",
     "openai": "^6",
@@ -29,5 +26,8 @@
     "typescript": "~5.9",
     "vite": "^7",
     "vitest": "^3"
+  },
+  "engines": {
+    "node": ">=22.12"
   }
 }

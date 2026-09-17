@@ -1,7 +1,7 @@
 export const toneLabels = {
-  concise: 'Concise',
-  friendly: 'Friendly',
-  formal: 'Formal',
+  concise: "Concise",
+  friendly: "Friendly",
+  formal: "Formal",
 } as const;
 
 export type Tone = keyof typeof toneLabels;
