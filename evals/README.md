@@ -9,7 +9,12 @@
 | `clean-ai-slop/css-and-prompt-assertions` | `assistant-widget` | Remove CSS/prompt copy checks from complete support-conversation tests while preserving core behavioral coverage |
 | `test-filesystem-safety/home-boundary` | `config-loader` | Establish safe filesystem test boundaries for an interface that uses the user directory by default |
 
-The standalone [`ssh-hosts`](fixtures/ssh-hosts/) fixture is a TypeScript/Commander CLI for managing SSH host aliases. It has its own package manifest and Bun lockfile; no evaluation case uses it yet.
+Standalone fixtures not yet attached to evaluation cases:
+
+- [`ssh-hosts`](fixtures/ssh-hosts/): a TypeScript/Commander CLI for managing SSH host aliases.
+- [`replydesk`](fixtures/replydesk/): a SvelteKit SSR workspace for generating customer reply drafts, with server-side prompts and an OpenAI client.
+
+Both have their own package manifests and Bun lockfiles.
 
 ## Case conventions
 
