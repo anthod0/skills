@@ -8,13 +8,12 @@
 | `clean-ai-slop/docs-with-rationale` | `config-loader` | Remove implementation diaries and code restatements while preserving business rationale and external obligations |
 | `clean-ai-slop/css-and-prompt-assertions` | `assistant-widget` | Remove CSS/prompt copy checks from complete support-conversation tests while preserving core behavioral coverage |
 | `test-filesystem-safety/home-boundary` | `config-loader` | Establish safe filesystem test boundaries for an interface that uses the user directory by default |
+| `test-filesystem-safety/ssh-hosts-cli` | `ssh-hosts` | Add command-level filesystem tests without repurposing the user directory |
+| `clean-ai-slop/replydesk-tests` | `replydesk` | Add model-adapter and page-interaction coverage without copying incidental prompt/CSS assertions |
 
-Standalone fixtures not yet attached to evaluation cases:
+The `ssh-hosts-cli` and `replydesk-tests` cases are materials-only: their fixtures have package manifests and Bun lockfiles, but neither calibration nor paired evaluation currently supports their dependency setup or test commands. Their baselines have not been executed. Do not run these fixtures on the host to compensate; runtime preparation and baseline validation belong in isolated containers.
 
-- [`ssh-hosts`](fixtures/ssh-hosts/): a TypeScript/Commander CLI for managing SSH host aliases.
-- [`replydesk`](fixtures/replydesk/): a SvelteKit SSR workspace for generating customer reply drafts, with server-side prompts and an OpenAI client.
-
-Both have their own package manifests and Bun lockfiles.
+Both new tasks ask agents to write tests. Hidden criteria distinguish newly added behavioral coverage, newly introduced low-value assertions, inherited seed cleanup, lost coverage, and operation safety. The SSH fixture deliberately leaves file-backed command tests unwritten; its previous store tests are kept only in the case's hidden reference directory.
 
 ## Case conventions
 

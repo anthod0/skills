@@ -11,6 +11,9 @@ describe("reply messages", () => {
   it("sends the customer text and known facts without losing whitespace or Unicode", () => {
     const messages = buildReplyMessages(input);
     expect(messages.map((message) => message.role)).toEqual(["system", "user"]);
+    expect(messages[0].content.trim().length).toBeGreaterThan(0);
+    expect(messages[0].content).toContain("customer support agent");
+    expect(messages[0].content).toContain("plain text");
     expect(JSON.parse(messages[1].content)).toEqual({
       customerMessage: input.message,
       knownFacts: input.context,

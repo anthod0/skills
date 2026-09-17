@@ -49,4 +49,4 @@ bun run typecheck
 bun run test
 ```
 
-Tests use Node's built-in test runner with tsx. File tests pass an explicit temporary config path and do not use your SSH config. The tool stores identity paths but never opens keys or connects to a host.
+Tests use Node's built-in test runner with tsx and cover configuration parsing and editing. The tool stores identity paths but never opens keys or connects to a host.

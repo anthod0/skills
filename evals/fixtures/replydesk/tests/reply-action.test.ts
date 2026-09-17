@@ -56,6 +56,7 @@ describe("reply submission", () => {
     expect(failed.status).toBe(502);
     expect(failed.data.values).toEqual(fields);
     expect(failed.data.error).toBeTruthy();
+    expect(failed.data.error).toContain("please try again");
     expect(JSON.stringify(failed.data)).not.toContain("private diagnostic");
 
     const retried = await submit();
