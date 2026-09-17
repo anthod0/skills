@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash, randomUUID } from "node:crypto";
 import { readRegular, readTree } from "./files.mjs";
+import { readCase } from "./case.mjs";
 import { readAuth, redact } from "./auth.mjs";
 import { createPlan } from "./plan.mjs";
 import { buildImage, runPiContainer, runInContainer } from "./docker.mjs";
@@ -27,11 +28,9 @@ async function main() {
       "Usage: bun evals/runner/evaluate.mjs <clean-ai-slop/mixed-assertions|clean-ai-slop/css-and-prompt-assertions> <provider> <model> [auth-file], or <case> --check",
     );
   }
-  const caseRoot = join(evalRoot, "cases", caseId);
-  const manifest = JSON.parse(await readRegular(join(caseRoot, "case.json")));
+  const { caseRoot, manifest, files } = await readCase(evalRoot, caseId);
   if (!["ssh-hosts", "replydesk"].includes(manifest.fixture) || manifest.skill !== "clean-ai-slop")
     throw new Error("Unsupported case manifest");
-  const files = await readTree(join(evalRoot, "fixtures", manifest.fixture));
   const task = await readRegular(join(caseRoot, "task.md"));
   const oracle = await readTree(join(caseRoot, "oracle"));
   const variants = JSON.parse(oracle["variants.json"]);

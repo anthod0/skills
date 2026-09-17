@@ -5,18 +5,28 @@ import { checkPath } from "./plan.mjs";
 
 const fileLimit = 1024 * 1024;
 const treeLimit = 16 * 1024 * 1024;
+const entryLimit = 512;
 
 export function checkFiles(files) {
   if (!files || typeof files !== "object" || Array.isArray(files))
     throw new Error("Expected text file map");
   let size = 0;
-  if (Object.keys(files).length > 512) throw new Error("Too many files");
+  const paths = Object.keys(files);
+  const directories = new Set();
+  if (paths.length > entryLimit) throw new Error("Too many files");
   for (const [path, text] of Object.entries(files)) {
     checkPath(path);
     if (path.split("/").includes(".git")) throw new Error("Git metadata is reserved");
     if (typeof text !== "string" || text.includes("\0") || Buffer.byteLength(text) > fileLimit)
       throw new Error("Invalid or oversized text file");
     size += Buffer.byteLength(text);
+    const parts = path.split("/");
+    for (let length = 1; length < parts.length; length++) {
+      const parent = parts.slice(0, length).join("/");
+      if (Object.hasOwn(files, parent)) throw new Error(`File/directory conflict: ${parent}`);
+      directories.add(parent);
+      if (paths.length + directories.size > entryLimit) throw new Error("Too many tree entries");
+    }
   }
   if (size > treeLimit) throw new Error("File tree too large");
 }
@@ -56,7 +66,7 @@ export async function readTree(root, { ignoreGit = false, excludeRoots = [] } = 
       const path = join(directory, name);
       const info = await lstat(path);
       if (!prefix && excludeRoots.includes(name) && info.isDirectory()) continue;
-      if (++entries > 512) throw new Error("Too many tree entries");
+      if (++entries > entryLimit) throw new Error("Too many tree entries");
       const relative = prefix + name;
       checkPath(relative);
       if (info.isDirectory()) await visit(path, relative + "/");

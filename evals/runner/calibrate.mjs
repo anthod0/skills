@@ -2,7 +2,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash, randomUUID } from "node:crypto";
-import { checkPath, createPlan } from "./plan.mjs";
+import { createPlan } from "./plan.mjs";
+import { readCase } from "./case.mjs";
 import { assess } from "./result.mjs";
 import { buildImage, runInContainer } from "./docker.mjs";
 import { readRegular, readTree } from "./files.mjs";
@@ -15,13 +16,7 @@ async function main() {
   if (!caseId || (flag && flag !== "--check") || extra.length) {
     throw new Error("Usage: bun evals/runner/calibrate.mjs <skill/case> [--check]");
   }
-  checkPath(caseId);
-  if (caseId.split("/").length !== 2) throw new Error("Expected skill/case");
-  const caseRoot = join(evalRoot, "cases", caseId);
-  const manifest = JSON.parse(await readRegular(join(caseRoot, "case.json")));
-  checkPath(manifest.fixture);
-  if (manifest.fixture.includes("/")) throw new Error("Fixture must name one directory");
-  const files = await readTree(join(evalRoot, "fixtures", manifest.fixture));
+  const { caseRoot, manifest, files } = await readCase(evalRoot, caseId);
   const variants = JSON.parse(await readRegular(join(caseRoot, "oracle/variants.json")));
   const reference = JSON.parse(await readRegular(join(caseRoot, "oracle/reference.json")));
   const jobs = createPlan(files, variants, reference, manifest.test_command);

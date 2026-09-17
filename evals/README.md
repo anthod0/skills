@@ -15,7 +15,7 @@ The automated calibration and paired runner support `mixed-assertions` and `css-
 
 The `ssh-hosts-cli` and `replydesk-tests` tasks ask agents to write tests. Hidden criteria distinguish newly added behavioral coverage, newly introduced low-value assertions, inherited seed cleanup, lost coverage, and operation safety. The SSH fixture deliberately leaves file-backed command tests unwritten; its previous store tests are kept only in the case's hidden reference directory. The CLI task includes the default user-directory boundary, explicit config selection and failed-operation cleanup.
 
-`ssh-hosts-unsafe-append` is a separate manual repair case. Its `input/default-config.test.ts.txt` is deliberately unsafe source material, excluded from automatic test discovery. Materialize it as `tests/default-config.test.ts` only inside the dedicated agent container, following its hidden preparation criteria. Do not run the seeded test as a baseline. This case is not wired into the calibration or paired CLI.
+`ssh-hosts-unsafe-append` is a separate manual repair case. The shared case loader maps its `input/tests/default-config.test.ts.txt` to `tests/default-config.test.ts` in the initial file set. The source remains excluded from automatic test discovery on the host; write the prepared file set only inside the dedicated agent container. Do not run the seeded test as a baseline. Input preparation is supported, but this case's execution and safety assessment are not wired into the calibration or paired CLI.
 
 ## Case conventions
 
@@ -23,7 +23,10 @@ Each case contains:
 
 - `case.json`: `fixture` is a directory name under `fixtures/`; `skill` identifies the target skill supplied in the with-skill condition; `allowed_changes` contains exact paths or `directory/**` patterns relative to the run's repository; `test_command` identifies the supported test entry point. For `bun run test`, the runtime validates the fixture's package script, then invokes its underlying Node or Vitest runner with a machine-readable reporter at the repository root; arbitrary package scripts are rejected.
 - `task.md`: the same user task for both comparison conditions, without the oracle.
+- Optional `input/`: additional files for this case, laid out relative to the fixture root. No extra JSON or manifest field is needed. Remove one trailing `.txt` from each input filename; other filenames and directory names remain unchanged. For example, `input/tests/example.test.ts.txt` becomes `tests/example.test.ts`; use `notes.txt.txt` to deliver `notes.txt`.
 - `oracle/`: acceptance criteria, optional hidden variants, and reference cleanup patches. These are not copied into the agent environment.
+
+`readCase(evalRoot, caseId)` in [case.mjs](runner/case.mjs) loads the fixture and that case's input into one file set without executing or writing their contents. Inputs are add-only: duplicate destinations and file/directory conflicts fail, including collisions within input after suffix removal. Links, unsafe paths and oversized combined inputs are rejected. Missing `input/` is allowed; malformed input is not silently ignored. Fixture `.txt` files, task/skill materials and agent exports are not renamed. Calibration and paired evaluation use this merged file set for preflight, snapshots, agent input and acceptance; inputs from other cases are never included.
 
 Multiple independent tasks may use the same fixture. Fixtures are evaluation inputs, not ordinary tests or documentation to clean up in this repository. Their low-value assertions and redundant text are deliberately retained as evaluation stimuli; do not clean them up incidentally. `ssh-hosts` uses Node's test runner through tsx; `replydesk` uses SvelteKit and Vitest. Both expose `bun run test`. Product contracts live in each fixture's `CONTRACT.md`.
 
