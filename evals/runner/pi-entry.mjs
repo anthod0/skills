@@ -1,9 +1,43 @@
 import { writeFile, stat } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 import { readRegular, readTree, writeTree } from "./files.mjs";
 import { selectAuth, redact } from "./auth.mjs";
 import { serializeAgentOutput } from "./agent-result.mjs";
 import { prepareWorkspace, generatedPaths } from "./workspace.mjs";
+
+export function piArguments({ provider, model, thinking, skills, systemPrompt }) {
+  const skillArgs = Object.keys(skills)
+    .filter((path) => path.endsWith("/SKILL.md"))
+    .flatMap((path) => ["--skill", `/run/pi-agent/skills/${path}`]);
+  if (
+    systemPrompt !== undefined &&
+    (typeof systemPrompt !== "string" || !systemPrompt || Object.keys(skills).length)
+  )
+    throw new Error("Review requires a system prompt and no skills");
+  return [
+    "--mode",
+    "json",
+    "--print",
+    "--no-session",
+    "--offline",
+    "--no-approve",
+    "--no-extensions",
+    "--no-skills",
+    "--no-prompt-templates",
+    "--no-themes",
+    "--no-context-files",
+    ...(systemPrompt === undefined
+      ? ["--tools", "read,write,edit,bash", ...skillArgs]
+      : ["--no-tools", "--system-prompt", systemPrompt]),
+    "--provider",
+    provider,
+    "--model",
+    model,
+    "--thinking",
+    thinking,
+  ];
+}
 
 async function main() {
   let input = "";
@@ -12,7 +46,11 @@ async function main() {
     input += chunk;
     if (Buffer.byteLength(input) > 16 * 1024 * 1024) throw new Error("Payload too large");
   }
-  const { provider, model, thinking, budgetSeconds, auth, task, files, skills } = JSON.parse(input);
+  const { provider, model, thinking, budgetSeconds, auth, task, files, skills, systemPrompt } =
+    JSON.parse(input);
+  const args = piArguments({ provider, model, thinking, skills, systemPrompt });
+  if (systemPrompt !== undefined && Object.keys(files).length)
+    throw new Error("Review workspace must be empty");
   if (
     typeof provider !== "string" ||
     typeof model !== "string" ||
@@ -63,44 +101,16 @@ async function main() {
     cwd: process.cwd(),
     provider,
     authMode: (await stat("/run/pi-agent/auth.json")).mode & 0o777,
+    mode: systemPrompt === undefined ? "agent" : "review",
   };
-  const skillArgs = Object.keys(skills)
-    .filter((path) => path.endsWith("/SKILL.md"))
-    .flatMap((path) => ["--skill", `/run/pi-agent/skills/${path}`]);
-  const child = spawnSync(
-    "pi",
-    [
-      "--mode",
-      "json",
-      "--print",
-      "--no-session",
-      "--offline",
-      "--no-approve",
-      "--no-extensions",
-      "--no-skills",
-      "--no-prompt-templates",
-      "--no-themes",
-      "--no-context-files",
-      "--tools",
-      "read,write,edit,bash",
-      "--provider",
-      provider,
-      "--model",
-      model,
-      "--thinking",
-      thinking,
-      ...skillArgs,
-      "--",
-      task,
-    ],
-    {
-      stdio: ["ignore", "pipe", "pipe"],
-      encoding: "utf8",
-      maxBuffer: 4 * 1024 * 1024,
-      timeout: (budgetSeconds - 10) * 1000,
-      killSignal: "SIGKILL",
-    },
-  );
+  const child = spawnSync("pi", args, {
+    input: task,
+    stdio: ["pipe", "pipe", "pipe"],
+    encoding: "utf8",
+    maxBuffer: 4 * 1024 * 1024,
+    timeout: (budgetSeconds - 10) * 1000,
+    killSignal: "SIGKILL",
+  });
   // Capture authoritative messages and every tool start/end; streaming deltas and
   // agent_end.messages duplicate this content and can balloon the export.
   const events = [];
@@ -109,6 +119,7 @@ async function main() {
     try {
       const event = JSON.parse(line);
       if (!event || typeof event.type !== "string") throw new Error("Invalid event");
+      if (/compaction/.test(event.type)) eventError = "Compacted evidence is not supported";
       if (event.type === "agent_end") events.push({ type: "agent_end" });
       else if (
         [
@@ -159,8 +170,10 @@ async function main() {
   );
 }
 
-main().catch(() => {
-  // Do not dump credential-related exceptions or unaudited child output.
-  console.error("Pi container bootstrap/export failed");
-  process.exitCode = 2;
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch(() => {
+    // Do not dump credential-related exceptions or unaudited child output.
+    console.error("Pi container bootstrap/export failed");
+    process.exitCode = 2;
+  });
+}

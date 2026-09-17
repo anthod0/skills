@@ -1,11 +1,20 @@
 import { constants } from "node:fs";
 import { open, lstat, readdir, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { checkPath } from "./plan.mjs";
 
 const fileLimit = 1024 * 1024;
 const treeLimit = 16 * 1024 * 1024;
 const entryLimit = 512;
+
+export function checkPath(path) {
+  if (
+    typeof path !== "string" ||
+    !/^[\w.+/-]+$/.test(path) ||
+    path.split("/").some((part) => !part || part === "." || part === "..")
+  ) {
+    throw new Error(`Unsafe relative path: ${path}`);
+  }
+}
 
 export function checkFiles(files) {
   if (!files || typeof files !== "object" || Array.isArray(files))
@@ -31,20 +40,20 @@ export function checkFiles(files) {
   if (size > treeLimit) throw new Error("File tree too large");
 }
 
-export async function readRegular(path) {
+export async function readRegular(path, maxBytes = fileLimit) {
   const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
   try {
     const info = await handle.stat();
-    if (!info.isFile() || info.nlink !== 1 || info.size > fileLimit)
+    if (!info.isFile() || info.nlink !== 1 || info.size > maxBytes)
       throw new Error("Expected bounded regular file, not a link");
-    const buffer = Buffer.alloc(fileLimit + 1);
+    const buffer = Buffer.alloc(maxBytes + 1);
     let length = 0;
     while (length < buffer.length) {
       const { bytesRead } = await handle.read(buffer, length, buffer.length - length, length);
       if (!bytesRead) break;
       length += bytesRead;
     }
-    if (length > fileLimit) throw new Error("File too large");
+    if (length > maxBytes) throw new Error("File too large");
     const text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(
       buffer.subarray(0, length),
     );

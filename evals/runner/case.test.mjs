@@ -46,12 +46,15 @@ test("case loading adds only its own input and strips one trailing txt suffix", 
     const loaded = await readCase(root, caseId);
     assert.equal(loaded.caseRoot, join(root, "cases", caseId));
     assert.equal(loaded.manifest.fixture, "shared");
-    assert.deepEqual({ ...loaded.files }, {
-      ...fixture,
-      "tests/added.test.ts": input["tests/added.test.ts.txt"],
-      "data/notes.txt": input["data/notes.txt.txt"],
-      "assets/icon.svg": input["assets/icon.svg"],
-    });
+    assert.deepEqual(
+      { ...loaded.files },
+      {
+        ...fixture,
+        "tests/added.test.ts": input["tests/added.test.ts.txt"],
+        "data/notes.txt": input["data/notes.txt.txt"],
+        "assets/icon.svg": input["assets/icon.svg"],
+      },
+    );
     assert.deepEqual({ ...(await readCase(root, "example/second")).files }, fixture);
     assert.equal(
       await readRegular(join(root, "cases", caseId, "input/tests/added.test.ts.txt")),

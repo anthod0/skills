@@ -19,8 +19,6 @@ Rewording the assertions or replacing them with regexes for the same fragments d
 
 Do not delete whole mixed-signal tests or weaken escaped-output assertions. The initial SSR checks do not cover browser interactions, pending duplicate submissions or clipboard handling; do not claim otherwise.
 
-## Calibration and review
+## Review evidence
 
-`reference.json` removes only the incidental assertions and their unused import. `variants.json` tests data/role separation, nonempty guidance, retained input, diagnostic exclusion, HTML escaping and copy availability. Compatible probes change CSS notation and prompt/error prose. Each probe is independent and must produce the designated assertion failure during calibration, not an import error or timeout.
-
-The CSS probes preserve computed values. Review prompt paraphrases for preserved policy; calibration cannot prove that different prompts yield equivalent model outputs. Record regression candidates and relevance separately from passing refactors, baseline, scope and cleanup quality. One pair does not establish skill effectiveness.
+Review the initial tests, final diff and operation trace. Distinguish inherited assertions from newly introduced coupling and targeted cleanup. Cite the changed assertions; neither test counts nor the agent's summary prove quality. This case requires manual review.

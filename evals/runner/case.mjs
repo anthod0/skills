@@ -1,7 +1,6 @@
 import { lstat } from "node:fs/promises";
 import { join } from "node:path";
-import { checkPath } from "./plan.mjs";
-import { checkFiles, readRegular, readTree } from "./files.mjs";
+import { checkPath, checkFiles, readRegular, readTree } from "./files.mjs";
 
 async function isDirectory(path) {
   try {

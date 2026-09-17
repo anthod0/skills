@@ -1,12 +1,5 @@
 {
   "fixture": "replydesk",
   "skill": "clean-ai-slop",
-  "allowed_changes": [
-    "README.md"
-  ],
-  "test_command": [
-    "bun",
-    "run",
-    "test"
-  ]
+  "allowed_changes": ["README.md"]
 }

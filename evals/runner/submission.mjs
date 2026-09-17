@@ -1,5 +1,4 @@
-import { applyEdits, checkCommand, checkPath } from "./plan.mjs";
-import { checkFiles } from "./files.mjs";
+import { checkPath, checkFiles } from "./files.mjs";
 
 export function changesBetween(original, submitted) {
   checkFiles(original);
@@ -26,20 +25,4 @@ export function checkScope(changes, allowed) {
     )
     .map(({ path }) => path);
   return { ok: violations.length === 0, violations };
-}
-
-export function createSubmissionPlan(files, variants, command) {
-  checkFiles(files);
-  checkCommand(command, files);
-  return [
-    { id: "baseline", expected: "pass", files: { ...files } },
-    ...variants.map((variant) => ({
-      id: variant.id,
-      kind: variant.kind,
-      expected: variant.kind === "regression" ? "assertion-failure" : "pass",
-      // Agent tests may be renamed or consolidated. Assertion relevance is
-      // reviewed separately, unlike designated-name calibration.
-      files: applyEdits(files, [variant]),
-    })),
-  ];
 }

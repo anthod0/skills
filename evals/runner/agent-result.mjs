@@ -112,16 +112,23 @@ export function assessAgent(output, { provider, model }) {
       (event) =>
         typeof event.toolCallId !== "string" ||
         !event.toolCallId ||
+        !event.args ||
+        typeof event.args !== "object" ||
+        Array.isArray(event.args) ||
         !["read", "write", "edit", "bash"].includes(event.toolName),
     ) ||
-    ends.some((event) => typeof event.isError !== "boolean") ||
+    ends.some(
+      (event) =>
+        typeof event.isError !== "boolean" || !event.result || typeof event.result !== "object",
+    ) ||
     starts.length !== ends.length ||
     new Set(starts.map((event) => event.toolCallId)).size !== starts.length ||
-    starts.some(
-      (start) =>
-        ends.filter((end) => end.toolCallId === start.toolCallId && end.toolName === start.toolName)
-          .length !== 1,
-    )
+    starts.some((start) => {
+      const matches = ends.filter(
+        (end) => end.toolCallId === start.toolCallId && end.toolName === start.toolName,
+      );
+      return matches.length !== 1 || events.indexOf(matches[0]) < events.indexOf(start);
+    })
   ) {
     return fail("Incomplete tool trace");
   }

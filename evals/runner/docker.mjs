@@ -90,15 +90,6 @@ async function runContainer(
   return execution;
 }
 
-export function runInContainer(image, { files, command }, options = {}) {
-  return runContainer(image, ["--network=none", "--pids-limit=128", "--memory=1g"], {
-    ...options,
-    prefix: "skill-calibration",
-    input: JSON.stringify({ files, command }),
-    timeoutMs: 100_000,
-  });
-}
-
 export function runPiContainer(image, payload, options = {}) {
   if (![180, 600].includes(payload.budgetSeconds)) throw new Error("Unsupported Pi time budget");
   return runContainer(

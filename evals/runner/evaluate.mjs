@@ -1,43 +1,48 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash, randomUUID } from "node:crypto";
 import { readRegular, readTree } from "./files.mjs";
 import { readCase } from "./case.mjs";
 import { readAuth, redact } from "./auth.mjs";
-import { createPlan } from "./plan.mjs";
-import { buildImage, runPiContainer, runInContainer } from "./docker.mjs";
+import { buildImage, runPiContainer } from "./docker.mjs";
 import { parseAgentOutput, assessAgent } from "./agent-result.mjs";
-import { changesBetween, checkScope, createSubmissionPlan } from "./submission.mjs";
-import { assess } from "./result.mjs";
+import { changesBetween, checkScope } from "./submission.mjs";
+import { supportedCases, conditions, criterionIds, reviewExitCode } from "./behavior.mjs";
+import { checkSelection, reviewRun } from "./judge.mjs";
 
 const evalRoot = fileURLToPath(new URL("../", import.meta.url));
 const hash = (text) => createHash("sha256").update(text).digest("hex");
-const supported = ["clean-ai-slop/mixed-assertions", "clean-ai-slop/css-and-prompt-assertions"];
 
 async function main() {
-  const [caseId, provider, model, authFile, ...extra] = process.argv.slice(2);
+  const [caseId, provider, model, judgeProvider, judgeModel, authFile, ...extra] =
+    process.argv.slice(2);
   const checkOnly = provider === "--check" && model === undefined;
   if (
-    !supported.includes(caseId) ||
+    !supportedCases.includes(caseId) ||
     extra.length ||
-    (!checkOnly &&
-      (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(provider ?? "") || !model || model.startsWith("-")))
-  ) {
+    (!checkOnly && (!judgeProvider || !judgeModel))
+  )
     throw new Error(
-      "Usage: bun evals/runner/evaluate.mjs <clean-ai-slop/mixed-assertions|clean-ai-slop/css-and-prompt-assertions> <provider> <model> [auth-file], or <case> --check",
+      `Usage: bun evals/runner/evaluate.mjs <${supportedCases.join("|")}> <provider> <model> <judge-provider> <judge-model> [auth-file], or <case> --check`,
     );
+  if (!checkOnly) {
+    checkSelection(provider, model);
+    checkSelection(judgeProvider, judgeModel);
   }
   const { caseRoot, manifest, files } = await readCase(evalRoot, caseId);
-  if (!["ssh-hosts", "replydesk"].includes(manifest.fixture) || manifest.skill !== "clean-ai-slop")
+  if (manifest.fixture !== "ssh-hosts" || manifest.skill !== caseId.split("/")[0])
     throw new Error("Unsupported case manifest");
   const task = await readRegular(join(caseRoot, "task.md"));
-  const oracle = await readTree(join(caseRoot, "oracle"));
-  const variants = JSON.parse(oracle["variants.json"]);
-  createPlan(files, variants, JSON.parse(oracle["reference.json"]), manifest.test_command);
+  const criteria = await readRegular(join(caseRoot, "oracle/criteria.md"));
+  const ids = criterionIds(criteria);
   checkScope([], manifest.allowed_changes);
   const skills = Object.create(null);
-  for (const skill of ["clean-ai-slop", "test-filesystem-safety"]) {
+  const suppliedSkills =
+    manifest.skill === "clean-ai-slop"
+      ? ["clean-ai-slop", "test-filesystem-safety"]
+      : [manifest.skill];
+  for (const skill of suppliedSkills) {
     for (const [path, text] of Object.entries(
       await readTree(join(evalRoot, "..", "skills", skill)),
     ))
@@ -45,11 +50,13 @@ async function main() {
   }
   if (checkOnly) {
     console.log(
-      `${caseId}: 2 agent conditions, ${2 * (variants.length + 1)} independent acceptance runs; no code executed or model called.`,
+      `${caseId}: 2 agent conditions, ${ids.length} behavior criteria; no code executed or model called.`,
     );
     return;
   }
   const auth = await readAuth(provider, authFile);
+  // Fail before paid agent work if the explicitly selected judge has no stored login.
+  await readAuth(judgeProvider, authFile);
   const directory = join(
     evalRoot,
     "runs",
@@ -60,7 +67,7 @@ async function main() {
     manifest,
     task,
     files,
-    oracle,
+    criteria,
     skills,
     harness: await readTree(join(evalRoot, "runner")),
   });
@@ -69,6 +76,8 @@ async function main() {
     case: caseId,
     provider,
     model,
+    judgeProvider,
+    judgeModel,
     thinking: "high",
     budgetSeconds: 600,
     sourceHash: hash(inputs),
@@ -85,7 +94,7 @@ async function main() {
   console.log(`Results: ${directory}`);
   try {
     Object.assign(report, await buildImage(directory, abort.signal, files));
-    for (const condition of ["without-skill", "with-skill"]) {
+    for (const condition of conditions) {
       if (abort.signal.aborted) throw new Error("Interrupted");
       const conditionRoot = join(directory, condition);
       await mkdir(conditionRoot);
@@ -96,14 +105,6 @@ async function main() {
         skillHashes: Object.fromEntries(
           Object.entries(supplied).map(([path, text]) => [path, hash(text)]),
         ),
-        jobs: [],
-        manualReview: {
-          cleanupQuality: "pending",
-          behavioralCoverage: "pending",
-          assertionRelevance: "pending",
-          safetyAttempts: "pending",
-          safetyEffects: "pending",
-        },
       };
       report.conditions.push(result);
       await save();
@@ -126,78 +127,43 @@ async function main() {
       result.agentElapsedMs = Date.now() - started;
       result.cleanupFailed = execution.cleanupFailed ?? false;
       if (execution.cleanupFailed) throw new Error(execution.problem);
-      let output;
       try {
-        output = parseAgentOutput({ ...execution, stdout: redact(execution.stdout, auth) });
+        const output = parseAgentOutput({ ...execution, stdout: redact(execution.stdout, auth) });
+        await writeFile(join(conditionRoot, "agent.json"), JSON.stringify(output, null, 2) + "\n");
+        await writeFile(
+          join(conditionRoot, "trace.jsonl"),
+          output.events.map((event) => JSON.stringify(event)).join("\n") + "\n",
+        );
+        result.agent = assessAgent(output, { provider, model });
+        result.runtime = output.runtime;
+        if (!result.agent.ok) throw new Error(result.agent.reason);
+        const changes = changesBetween(files, output.files);
+        await writeFile(
+          join(conditionRoot, "changes.json"),
+          JSON.stringify(changes, null, 2) + "\n",
+        );
+        result.scope = checkScope(changes, manifest.allowed_changes);
+        result.status = "recorded";
       } catch (error) {
         result.status = "invalid-run";
-        result.error = error.message;
-        await save();
-        continue;
+        result.error = redact(error.message, auth);
       }
-      await writeFile(join(conditionRoot, "agent.json"), JSON.stringify(output, null, 2) + "\n");
-      await writeFile(
-        join(conditionRoot, "trace.jsonl"),
-        output.events.map((event) => JSON.stringify(event)).join("\n") + "\n",
-      );
-      result.agent = assessAgent(output, { provider, model });
-      result.runtime = output.runtime;
-      if (!result.agent.ok) {
-        result.status = "invalid-run";
-        await save();
-        continue;
-      }
-      const changes = changesBetween(files, output.files);
-      await writeFile(join(conditionRoot, "changes.json"), JSON.stringify(changes, null, 2) + "\n");
-      result.scope = checkScope(changes, manifest.allowed_changes);
-      // Refuse to mutate changed product code, rather than misattributing an
-      // anchor mismatch to test quality. Scope failure is already decisive.
-      if (!result.scope.ok) {
-        result.status = "failed";
-        await save();
-        continue;
-      }
-      const jobs = createSubmissionPlan(output.files, variants, manifest.test_command);
-      for (const job of jobs) {
-        if (abort.signal.aborted) throw new Error("Interrupted");
-        const run = await runInContainer(
-          report.image,
-          { files: job.files, command: manifest.test_command },
-          { signal: abort.signal },
-        );
-        await writeFile(join(conditionRoot, `${job.id}.jsonl`), run.stdout);
-        await writeFile(join(conditionRoot, `${job.id}.stderr.log`), run.stderr);
-        const verdict = assess(job, run);
-        result.jobs.push({
-          id: job.id,
-          kind: job.kind ?? "baseline",
-          expected: job.expected,
-          ...verdict,
-        });
-        await save();
-        console.log(
-          `${condition} ${job.id}: ${verdict.ok ? "OK" : "FAIL"} ${verdict.reason ?? verdict.outcome}`,
-        );
-        if (run.cleanupFailed) throw new Error(run.problem);
-      }
-      result.baseline = result.jobs[0].ok;
-      result.regressions = {
-        assertionsObserved: result.jobs.filter((job) => job.kind === "regression" && job.ok).length,
-        total: variants.filter((variant) => variant.kind === "regression").length,
-        relevance: "pending-review",
-      };
-      result.refactors = {
-        accepted: result.jobs.filter((job) => job.kind === "refactor" && job.ok).length,
-        total: variants.filter((variant) => variant.kind === "refactor").length,
-      };
-      result.status = result.jobs.every((job) => job.ok) ? "needs-review" : "failed";
       await save();
     }
-    report.status = report.conditions.some((result) => result.status === "invalid-run")
-      ? "error"
-      : report.conditions.every((result) => result.status === "needs-review")
-        ? "needs-review"
-        : "failed";
+    // Scope violations still receive behavior review: neither dimension hides the other.
+    report.status = "recorded";
+    await save();
+    const review = await reviewRun(
+      directory,
+      { provider: judgeProvider, model: judgeModel },
+      {
+        authFile,
+        image: report.image,
+        signal: abort.signal,
+      },
+    );
+    report.review = relative(directory, join(review.directory, "result.json"));
+    report.status = review.report.status;
   } catch (error) {
     report.status = "error";
     report.error = redact(error.message, auth);
@@ -208,11 +174,11 @@ async function main() {
     process.removeListener("SIGINT", interrupt);
     process.removeListener("SIGTERM", interrupt);
   }
-  console.log(`Comparison: ${report.status}. Manual criteria are not automatically scored.`);
-  if (report.status !== "needs-review") process.exitCode = 1;
+  console.log(`Comparison: ${report.status}`);
+  process.exitCode = reviewExitCode(report.status);
 }
 
 main().catch((error) => {
   console.error(error.message);
-  process.exitCode = 1;
+  process.exitCode = 2;
 });

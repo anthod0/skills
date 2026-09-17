@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { runPiContainer } from "./docker.mjs";
+import { piArguments } from "./pi-entry.mjs";
 import { selectAuth, redact } from "./auth.mjs";
 import { assessPiSmoke } from "./pi-smoke-result.mjs";
 import { assessAgent, parseAgentOutput, serializeAgentOutput } from "./agent-result.mjs";
@@ -61,7 +62,13 @@ function packet() {
     events: [
       ...["read", "write", "edit", "bash"].flatMap((toolName) => [
         { type: "tool_execution_start", toolName, toolCallId: toolName, args: {} },
-        { type: "tool_execution_end", toolName, toolCallId: toolName, isError: false },
+        {
+          type: "tool_execution_end",
+          toolName,
+          toolCallId: toolName,
+          isError: false,
+          result: { content: [] },
+        },
       ]),
       {
         type: "message_end",
@@ -111,6 +118,15 @@ test("requires completion from expected model, complete tool traces, and verifie
     },
     (output) => {
       output.events[1].isError = "false";
+    },
+    (output) => {
+      [output.events[0], output.events[1]] = [output.events[1], output.events[0]];
+    },
+    (output) => {
+      delete output.events[0].args;
+    },
+    (output) => {
+      delete output.events[1].result;
     },
     (output) => {
       output.events[8].message.model = "other-model";
@@ -174,6 +190,35 @@ test("unavailable post-run authentication preserves operation evidence without u
   assert.equal(archived.events[2].toolName, "unknown");
   assert.equal(archived.events.filter((event) => event.type === "tool_execution_start").length, 4);
   assert.equal(assessAgent(archived, selection).ok, false);
+});
+
+test("review invocations disable all tools and discovered resources; skills cannot enter a review", () => {
+  const request = {
+    ...selection,
+    thinking: "high",
+    skills: {},
+    systemPrompt: "Trusted review rules",
+  };
+  const args = piArguments(request);
+  for (const flag of [
+    "--no-tools",
+    "--no-skills",
+    "--no-extensions",
+    "--no-context-files",
+    "--no-approve",
+    "--no-session",
+  ])
+    assert.ok(args.includes(flag));
+  assert.equal(args[args.indexOf("--system-prompt") + 1], request.systemPrompt);
+  assert.equal(args.includes("--tools"), false);
+  assert.throws(() => piArguments({ ...request, skills: { "example/SKILL.md": "hidden" } }));
+  const agent = piArguments({
+    ...selection,
+    thinking: "high",
+    skills: { "example/SKILL.md": "skill" },
+  });
+  assert.equal(agent[agent.indexOf("--tools") + 1], "read,write,edit,bash");
+  assert.equal(agent[agent.indexOf("--skill") + 1], "/run/pi-agent/skills/example/SKILL.md");
 });
 
 test("Pi profiles send credentials only on stdin, bound the container lifetime, and remove their own container", async () => {

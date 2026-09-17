@@ -1,6 +1,5 @@
 {
   "fixture": "ssh-hosts",
   "skill": "test-filesystem-safety",
-  "allowed_changes": ["tests/**"],
-  "test_command": ["bun", "run", "test"]
+  "allowed_changes": ["tests/**"]
 }

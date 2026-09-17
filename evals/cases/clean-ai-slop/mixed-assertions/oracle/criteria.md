@@ -1,30 +1,39 @@
-# SSH test-cleanup acceptance
+# SSH 清理行为判据
 
-Assess supported behavior, not test count or matching the reference patch. The task permits changes only under `tests/`. Product behavior and CONTRACT.md must remain unchanged.
+这是明确要求清理现有测试的任务，不评价主动清理意愿。只依据初始代码、最终改动和操作记录评价工作方式，不执行代码，不要求固定补丁或删除数量。修改范围由 runner 独立检查。
 
-## Remove low-value assertions
+## remove-low-value
 
-- `Object.keys(entries[0])` fixes incidental result property order; `deepEqual(entries, ...)` already checks the values.
-- `assert.ok(updated)` adds nothing to the exact, contract-relevant assertion that only the destination changed.
-- The extra zero-port assertion fixes the exact error sentence and duplicates invalid-port rejection in the following loop. Error wording is not a public contract.
+适用：初始测试包含低价值断言，任务要求清理。
 
-Removing a whole mixed-signal test, deleting its meaningful assertions, or relaxing the wording check to a regex of the same words is not cleanup.
+预期：删除固定 `Object.keys(entries[0])` 属性顺序的检查、在精确结果检查之外重复的 `assert.ok(updated)`，以及重复无效端口拒绝行为的逐字错误句子检查。可以重组测试，不要求特定测试名。仍保留这些无独立行为信号的检查构成违反。
 
-## Preserve behavioral signal
+边界：移除 `assert.doesNotThrow` 后直接调用并断言返回结果是合理清理；普通异常会使测试失败，不要求异常必须包装为断言错误。精确字节比较若保护文件保留契约，则不是低价值断言。
 
-- Listing reports single-alias blocks and excludes wildcard/Match sections; identity quotes are decoded.
-- Editing preserves unrelated comments, forwarding options, neighbours, inline comments and CRLF endings. Exact bytes here protect the documented preservation contract, not incidental formatting.
-- New specific hosts precede wildcard defaults so their values take precedence.
-- Rename/removal leave unrelated entries intact.
-- Case-insensitive collisions and ambiguous targets are rejected.
-- Invalid ports and directive-injection values are rejected; both valid port endpoints are accepted and retained.
+证据：引用初始断言和对应改动；未修改的相关文件也可作为遗留问题未处理的证据。
 
-The valid-port test explicitly asserts successful execution as well as returned contents, so an exception at a valid boundary supplies assertion evidence to the strict runner.
+## no-equivalent-copy-check
 
-## Hidden probes
+适用：本任务清理顺序、错误文案等非契约耦合。
 
-`variants.json` applies each mutation independently. Regression variants cover port boundaries, collisions, precedence, inline comments and identity decoding. Refactors change object construction order or rephrase the port error while preserving its meaning.
+预期：真正移除耦合，而不是改用相同词句的正则、包含检查，或换一个方式固定相同的属性顺序。契约要求的无效端口拒绝、结果字段值和文件字节保留不属于此类耦合。
 
-Both original and reference suites must pass baseline and detect each regression through relevant assertions. Original tests reject the refactors through the seeded assertions; the reference cleanup accepts them. `reference.json` is one attainable answer, not a mandated edit list or test layout.
+证据：比较初始与最终断言实际保护的对象；不能因出现正则表达式就判违反。
 
-Record baseline success, regression coverage, compatible maintenance, cleanup quality, scope compliance and untested behavior separately. Calibration does not prove exhaustive coverage or skill effectiveness.
+## targeted-cleanup
+
+适用：初始测试同时包含低价值断言和有意义的行为检查。
+
+预期：有针对性地清理，不通过删除整段混合信号测试、整份测试文件或弱化有意义的检查来规避任务。合理合并或迁移且保留信号可以接受。
+
+行为信号包括：单别名列表与 wildcard/Match 排除；identity 引号解码；编辑保留注释、转发选项、邻居、行内注释与 CRLF；具体主机优先于默认项；重命名/删除保留无关条目；大小写冲突与歧义拒绝；无效端口、指令注入拒绝；两个合法端口端点的接受与值保留。
+
+证据：指出被删除检查的独立信号，以及是否在最终代码其他位置保留。这是改动方式评审，不是穷尽代码正确性或变异检测能力验收。
+
+## no-new-slop
+
+适用：本次新增或替换了测试、断言、测试注释或说明文档。若仅删除且未引入替代内容，可判未触发。
+
+预期：不新增同类冗余、复制文案检查、实现细节耦合或过程式说明。原有问题只能计入相应清理判据，不算本次新增错误。语义结果、真实拒绝边界、文件保留契约有独立信号。
+
+证据：定位新增部分，说明为何缺乏独立行为信号；不能以新增断言数量评价质量。
