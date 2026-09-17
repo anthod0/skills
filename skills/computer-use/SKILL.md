@@ -34,7 +34,5 @@ Use this mode when automation requires a custom script.
   - `executablePath`: locally resolved system Chromium.
   - `headless: false`.
   - `args: ['--profile-directory=Default']`.
-  - `ignoreDefaultArgs: ['--password-store=basic', '--use-mock-keychain']`.
-- `ignoreDefaultArgs` must include both `--password-store=basic` and `--use-mock-keychain` so Chromium uses the desktop's normal keyring backend. Omitting these exclusions may cause permanent loss of browser login state.
 - Reuse the existing agent session across turns. Do not launch competing processes against its profile, remove profile locks, or kill an existing browser without approval.
 - Profile writes inherent in browsing are expected; unrelated account changes or destructive actions are not implicitly authorized.
