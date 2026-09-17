@@ -191,19 +191,47 @@ test("judge protocol errors, tool attempts and transport failures remain review 
   }
 });
 
-test("judge cleanup failure stops subsequent reviews", async () => {
+test("archived agent cleanup failure blocks every review, including valid sibling conditions", async () => {
+  await withArchive(async (root, options) => {
+    const original = JSON.parse(await readRegular(join(root, "result.json")));
+    original.conditions = [{ condition: "with-skill", cleanupFailed: true }];
+    await writeFile(join(root, "result.json"), JSON.stringify(original));
+    let calls = 0;
+    const review = await reviewRun(root, selection, {
+      ...options,
+      run: async (image, payload) => {
+        calls++;
+        return successfulJudge(image, payload);
+      },
+    });
+    assert.equal(calls, 0);
+    assert.equal(review.report.status, "error");
+    assert.match(review.report.error, /cleanup failed/);
+  });
+});
+
+test("judge cleanup failure preserves the completed export and stops subsequent reviews", async () => {
   await withArchive(async (root, options) => {
     let calls = 0;
     const review = await reviewRun(root, selection, {
       ...options,
-      run: async () => {
+      run: async (image, payload) => {
         calls++;
-        return { code: 0, stdout: "", cleanupFailed: true };
+        return {
+          ...successfulJudge(image, payload),
+          cleanupFailed: true,
+          problem: "Container cleanup failed",
+        };
       },
     });
     assert.equal(calls, 1);
     assert.equal(review.report.status, "error");
     assert.equal(review.report.conditions[0].cleanupFailed, true);
+    assert.equal(review.report.conditions[0].behavior, undefined);
+    const archived = JSON.parse(
+      await readRegular(join(review.directory, "without-skill/judge.json")),
+    );
+    assert.equal(JSON.parse(archived.events[0].message.content[0].text).criteria.length, 4);
     assert.equal(review.report.conditions[1].status, "error");
     assert.equal(review.report.conditions[1].behavior, undefined);
   });

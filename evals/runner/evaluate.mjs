@@ -126,14 +126,18 @@ async function main() {
       );
       result.agentElapsedMs = Date.now() - started;
       result.cleanupFailed = execution.cleanupFailed ?? false;
-      if (execution.cleanupFailed) throw new Error(execution.problem);
       try {
-        const output = parseAgentOutput({ ...execution, stdout: redact(execution.stdout, auth) });
+        const output = parseAgentOutput({
+          ...execution,
+          problem: execution.cleanupFailed ? undefined : execution.problem,
+          stdout: redact(execution.stdout, auth),
+        });
         await writeFile(join(conditionRoot, "agent.json"), JSON.stringify(output, null, 2) + "\n");
         await writeFile(
           join(conditionRoot, "trace.jsonl"),
           output.events.map((event) => JSON.stringify(event)).join("\n") + "\n",
         );
+        if (execution.cleanupFailed) throw new Error(execution.problem);
         result.agent = assessAgent(output, { provider, model });
         result.runtime = output.runtime;
         if (!result.agent.ok) throw new Error(result.agent.reason);
@@ -148,6 +152,7 @@ async function main() {
         result.status = "invalid-run";
         result.error = redact(error.message, auth);
       }
+      if (execution.cleanupFailed) throw new Error(execution.problem);
       await save();
     }
     // Scope violations still receive behavior review: neither dimension hides the other.

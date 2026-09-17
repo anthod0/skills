@@ -68,11 +68,12 @@ export function parseReview(text, criteria, material) {
       typeof item.reason !== "string" ||
       !item.reason.trim() ||
       !Array.isArray(item.evidence) ||
+      (item.verdict !== "insufficient-evidence" && !item.evidence.length) ||
       item.evidence.some((id) => !evidence.has(id))
     )
       throw new Error("Invalid criterion, verdict, reason, or evidence reference");
     if (
-      ["satisfied", "violated"].includes(item.verdict) &&
+      item.verdict !== "insufficient-evidence" &&
       !item.evidence.some((id) => {
         const source = evidence.get(id);
         return (

@@ -118,6 +118,14 @@ test("review validation requires every criterion once, valid verdicts and resolv
     (review) => {
       review.criteria[0].evidence = ["event:4"];
     },
+    (review) => {
+      review.criteria[0].verdict = "not-applicable";
+      review.criteria[0].evidence = [];
+    },
+    (review) => {
+      review.criteria[0].verdict = "not-applicable";
+      review.criteria[0].evidence = ["task"];
+    },
   ]) {
     const review = verdict();
     mutate(review);
@@ -133,7 +141,7 @@ test("review validation requires every criterion once, valid verdicts and resolv
   uncertain.criteria[1] = {
     ...uncertain.criteria[1],
     verdict: "not-applicable",
-    evidence: ["task"],
+    evidence: ["initial:tests/a.ts"],
   };
   assert.deepEqual(parseReview(JSON.stringify(uncertain), criteria, material), uncertain);
 });

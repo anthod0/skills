@@ -79,6 +79,8 @@ export async function reviewRun(
         harness: await readTree(join(evalRoot, "runner")),
       }) + "\n",
     );
+    if (original.conditions?.some((result) => result.cleanupFailed))
+      throw new Error("Archived agent container cleanup failed; review stopped");
     // Validate all archived evidence before calling a model or building an image.
     const prepared = [];
     for (const condition of conditions) {
@@ -92,8 +94,6 @@ export async function reviewRun(
         });
         result.agent = assessAgent(output, original);
         if (!result.agent.ok) throw new Error(result.agent.reason);
-        if (original.conditions?.find((item) => item.condition === condition)?.cleanupFailed)
-          throw new Error("Agent container cleanup failed");
         const trace = (await readArtifact(join(root, "trace.jsonl")))
           .trim()
           .split("\n")
@@ -145,9 +145,14 @@ export async function reviewRun(
         );
         result.judgeElapsedMs = Date.now() - started;
         result.cleanupFailed = execution.cleanupFailed ?? false;
-        if (execution.cleanupFailed) throw new Error("Judge container cleanup failed");
-        const output = parseAgentOutput({ ...execution, stdout: redact(execution.stdout, auth) });
+        const output = parseAgentOutput({
+          ...execution,
+          // A cleanup error invalidates the run, not an already completed safe export.
+          problem: execution.cleanupFailed ? undefined : execution.problem,
+          stdout: redact(execution.stdout, auth),
+        });
         await writeFile(join(destination, "judge.json"), JSON.stringify(output, null, 2) + "\n");
+        if (execution.cleanupFailed) throw new Error("Judge container cleanup failed");
         result.judge = assessAgent(output, selection);
         const messages = output.events.filter(
           (event) => event.type === "message_end" && event.message?.role === "assistant",
