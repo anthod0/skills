@@ -7,13 +7,14 @@ import { listHosts } from '../src/config.js';
 import { editConfig, readConfig } from '../src/store.js';
 
 async function sandbox(t: TestContext) {
-  const testRoot = await mkdtemp(join(tmpdir(), 'ssh-hosts-'));
+  const temporaryDirectory = resolve(tmpdir());
+  const userHome = resolve(homedir());
+  const testRoot = await mkdtemp(join(temporaryDirectory, 'ssh-hosts-'));
   t.after(async () => {
     const root = resolve(testRoot);
-    const withinTemp = relative(resolve(tmpdir()), root);
-    const home = resolve(homedir());
+    const withinTemp = relative(temporaryDirectory, root);
     if (!testRoot || !withinTemp || isAbsolute(withinTemp) || withinTemp === '..' ||
-        withinTemp.startsWith(`..${sep}`) || root === home || home.startsWith(root + sep)) {
+        withinTemp.startsWith(`..${sep}`) || root === userHome || userHome.startsWith(root + sep)) {
       throw new Error('Refusing cleanup outside the allocated temporary directory.');
     }
     await rm(testRoot, { recursive: true, force: true });
