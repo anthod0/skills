@@ -1,0 +1,5 @@
+{
+  "fixture": "ssh-hosts",
+  "skill": "test-filesystem-safety",
+  "allowed_changes": ["src/**", "tests/**", "README.md", "CONTRACT.md"]
+}

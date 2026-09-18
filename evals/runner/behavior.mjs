@@ -4,7 +4,7 @@ export const supportedCases = [
   "clean-ai-slop/mixed-assertions",
   "clean-ai-slop/css-and-prompt-assertions",
   "clean-ai-slop/reply-language",
-  "test-filesystem-safety/ssh-hosts-unsafe-append",
+  "test-filesystem-safety/ssh-hosts-list-filter",
 ];
 export const conditions = ["without-skill", "with-skill"];
 export const verdicts = ["satisfied", "violated", "not-applicable", "insufficient-evidence"];
