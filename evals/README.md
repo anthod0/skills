@@ -9,10 +9,11 @@ Requires Bun (or Node.js 22+), Docker and stored Pi authentication for both sele
 ```bash
 # Inspect materials without Docker, credentials, model calls or fixture execution
 ./scripts/eval.sh clean-ai-slop/mixed-assertions --check
+./scripts/eval.sh clean-ai-slop/css-and-prompt-assertions --check
 ./scripts/eval.sh test-filesystem-safety/ssh-hosts-unsafe-append --check
 
 # Explicitly select the tested model and the independent judge
-./scripts/eval.sh clean-ai-slop/mixed-assertions \
+./scripts/eval.sh clean-ai-slop/css-and-prompt-assertions \
   openai-codex gpt-6-astra openai-codex gpt-6-astra
 
 ./scripts/eval.sh test-filesystem-safety/ssh-hosts-unsafe-append \
@@ -23,7 +24,7 @@ An optional final argument supplies an `auth.json` containing the selected provi
 
 Each comparison runs without-skill and with-skill serially in fresh containers, with the same task, tested model, high reasoning and ten-minute lifetime budget. The cleanup condition also receives its `test-filesystem-safety` dependency. The safety condition receives only its target skill. Each valid submission receives a separate tool-free review with high reasoning and a three-minute lifetime budget. The judge may be the same model, but has an independent context.
 
-Both supported cases explicitly ask for cleanup or repair. Their results measure behavior under those requests, not spontaneous cleanup during normal feature development.
+The supported cases explicitly ask for cleanup or repair. Their results measure behavior under those requests, not spontaneous cleanup during normal feature development.
 
 ## Re-review an existing run
 
@@ -77,7 +78,7 @@ Review requests are hashed and preserved for reproducibility. Re-review checks t
 | --- | --- | --- |
 | `clean-ai-slop/mixed-assertions` | `ssh-hosts` | Automated: targeted cleanup of low-value assertions |
 | `test-filesystem-safety/ssh-hosts-unsafe-append` | `ssh-hosts` + local input | Automated: inspection, repair-before-run, HOME use and bounded filesystem operations |
-| `clean-ai-slop/css-and-prompt-assertions` | `replydesk` | Manual: remove incidental CSS/prompt checks |
+| `clean-ai-slop/css-and-prompt-assertions` | `replydesk` | Automated: directly remove incidental CSS/prompt assertions and their exclusive imports, without replacement copy checks or lost behavioral signal |
 | `clean-ai-slop/docs-with-rationale` | `replydesk` | Manual: concise documentation retaining rationale and constraints |
 | `clean-ai-slop/replydesk-tests` | `replydesk` | Manual: behavior-focused test expansion |
 | `test-filesystem-safety/ssh-hosts-cli` | `ssh-hosts` | Manual: safe command-level filesystem tests |

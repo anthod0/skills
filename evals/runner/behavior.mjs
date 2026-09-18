@@ -2,6 +2,7 @@ import { changesBetween } from "./submission.mjs";
 
 export const supportedCases = [
   "clean-ai-slop/mixed-assertions",
+  "clean-ai-slop/css-and-prompt-assertions",
   "test-filesystem-safety/ssh-hosts-unsafe-append",
 ];
 export const conditions = ["without-skill", "with-skill"];

@@ -1,24 +1,41 @@
-# Replydesk test-cleanup acceptance
+# CSS 与 Prompt 断言清理判据
 
-The task is to clean existing tests, not add the missing adapter or interaction suite. Only `tests/` may change. Keep product code, dependencies, configuration and documentation unchanged.
+任务明确要求清理已有低价值或脆弱测试，不衡量正常开发时的主动清理。这里的预期是直接移除非契约的 CSS/prompt 文本断言及其专属依赖，不是修正文案、改写匹配方式或增加替代测试。只依据初始代码、最终改动与操作记录评审；不执行材料，不要求固定补丁或删除数量。修改范围由 runner 独立检查。
 
-## Remove incidental copy checks
+## remove-prompt-copy
 
-- Prompt fragments `customer support agent` and `plain text` in `reply-prompt.test.ts`.
-- Error fragment `please try again` in `reply-action.test.ts`.
-- CSS fragments `padding: 28px;` and `border-radius: 16px;` in `reply-page.test.ts`, together with the exclusively used raw CSS import.
+适用：初始 `tests/reply-prompt.test.ts` 包含固定 prompt 片段检查。
 
-Rewording the assertions or replacing them with regexes for the same fragments does not remove their coupling. CSS values and prompt/error prose have no verbatim contract in this product.
+预期：直接删除对 `customer support agent`、`plain text` 这些 prompt 措辞的断言。保留任一此类非契约文案检查属于违反。产品契约要求 system/user 角色和数据分离，但不承诺 prompt 的逐字句子；这里不是删除产品 prompt 或整份 prompt 测试。
 
-## Preserve independent signal
+证据：定位初始断言和最终改动，说明这些文字是否仍作为测试预期，而不是仅搜索源码是否还出现这些词。
 
-- Action validation rejects invalid input before generation, and successful results retain the draft and form values.
-- Provider failure exposes an error and the correct status without private diagnostics, retains input, and allows a successful retry that clears the error.
-- Prompt roles remain system/user; nonempty guidance is independent of user text and notes. Decoded user data preserves original Unicode and whitespace. Comparing system content across different inputs checks isolation, not fixed prompt wording.
-- The rendered composer submits by POST, requires the customer message and disables copy before a draft exists. A returned draft is escaped text and makes copy available.
+## remove-css-copy
 
-Do not delete whole mixed-signal tests or weaken escaped-output assertions. The initial SSR checks do not cover browser interactions, pending duplicate submissions or clipboard handling; do not claim otherwise.
+适用：初始 `tests/reply-page.test.ts` 读取 raw CSS 并检查具体声明。
 
-## Review evidence
+预期：直接删除 `padding: 28px;`、`border-radius: 16px;` 的断言，以及只为这些检查服务的 `../src/app.css?raw` 导入。产品没有精确 CSS 声明或外观数值契约，不需要用计算样式测试、截图或快照接替这些检查。保留或新增同类外观约束、留下已无用途的专属导入均属于未完成清理。
 
-Review the initial tests, final diff and operation trace. Distinguish inherited assertions from newly introduced coupling and targeted cleanup. Cite the changed assertions; neither test counts nor the agent's summary prove quality. This case requires manual review.
+证据：比较初始和最终测试及导入；不得通过修改产品 CSS 来满足断言，也不能把删除整份页面测试当成有针对性的清理。
+
+## no-replacement-copy-check
+
+适用：本任务清理非契约的 prompt、CSS 和错误文案耦合。
+
+预期：不要把原断言换成同义正则、包含检查、快照、不同词句/数值、computed style 或其他仍固定同类实现细节的检查。初始 `tests/reply-action.test.ts` 中 `please try again` 的错误文案断言也应直接删除，保留错误存在、状态码、输入保留与重试行为的检查。
+
+边界：测试使用字符串、正则或精确值本身不构成违规。角色枚举、输入数据原样传递、测试桩返回 draft 的原样保留、错误诊断不泄漏、HTML 转义与可用状态都有独立行为信号，不属于文案复制检查。
+
+证据：引用删除部分和所有新增/替换检查，解释其实际约束对象；不能凭改用了正则或包含某个词就下结论。
+
+## preserve-independent-signal
+
+适用：初始测试把文案/CSS 检查和有意义的行为检查放在一起。
+
+预期：删除目标断言及专属依赖，而不是删掉整段混合信号测试或削弱有意义的断言。允许合理重组，只要最终保留相同的独立信号：
+
+- Prompt：system/user 角色正确；system guidance 非空且独立于客户文本和备注；结构化 user 数据保留原始 Unicode、空白、消息与已知事实。
+- Action：无效输入在调用生成器之前被拒绝；成功时保留 draft 和表单值；失败时保留输入、返回错误及正确状态、隐藏私有诊断，重试成功可清除错误。
+- Page：POST 表单和必填消息；没有 draft 时不能复制；返回 draft 以转义文本呈现，且复制可用。
+
+证据：对照初始与最终检查指出保留/丢失的行为信号。现有 SSR 检查不证明浏览器交互、等待时防重复提交或剪贴板处理，不要求为本次清理补齐这些未覆盖行为；也不把通过测试当成规范遵循的总证明。

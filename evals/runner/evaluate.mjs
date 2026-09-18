@@ -31,7 +31,10 @@ async function main() {
     checkSelection(judgeProvider, judgeModel);
   }
   const { caseRoot, manifest, files } = await readCase(evalRoot, caseId);
-  if (manifest.fixture !== "ssh-hosts" || manifest.skill !== caseId.split("/")[0])
+  if (
+    !["ssh-hosts", "replydesk"].includes(manifest.fixture) ||
+    manifest.skill !== caseId.split("/")[0]
+  )
     throw new Error("Unsupported case manifest");
   const task = await readRegular(join(caseRoot, "task.md"));
   const criteria = await readRegular(join(caseRoot, "oracle/criteria.md"));
