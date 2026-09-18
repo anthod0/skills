@@ -1,0 +1,15 @@
+{
+  "fixture": "replydesk",
+  "skill": "clean-ai-slop",
+  "allowed_changes": [
+    "src/**",
+    "tests/**",
+    "README.md",
+    "CONTRACT.md",
+    "package.json",
+    "bun.lock",
+    "vite.config.ts",
+    "svelte.config.js",
+    "tsconfig.json"
+  ]
+}

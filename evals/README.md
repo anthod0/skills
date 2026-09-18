@@ -8,12 +8,13 @@ Requires Bun (or Node.js 22+), Docker and stored Pi authentication for both sele
 
 ```bash
 # Inspect materials without Docker, credentials, model calls or fixture execution
+./scripts/eval.sh clean-ai-slop/reply-language --check
 ./scripts/eval.sh clean-ai-slop/mixed-assertions --check
 ./scripts/eval.sh clean-ai-slop/css-and-prompt-assertions --check
 ./scripts/eval.sh test-filesystem-safety/ssh-hosts-unsafe-append --check
 
 # Explicitly select the tested model and the independent judge
-./scripts/eval.sh clean-ai-slop/css-and-prompt-assertions \
+./scripts/eval.sh clean-ai-slop/reply-language \
   openai-codex gpt-6-astra openai-codex gpt-6-astra
 
 ./scripts/eval.sh test-filesystem-safety/ssh-hosts-unsafe-append \
@@ -24,7 +25,11 @@ An optional final argument supplies an `auth.json` containing the selected provi
 
 Each comparison runs without-skill and with-skill serially in fresh containers, with the same task, tested model, high reasoning and ten-minute lifetime budget. The cleanup condition also receives its `test-filesystem-safety` dependency. The safety condition receives only its target skill. Each valid submission receives a separate tool-free review with high reasoning and a three-minute lifetime budget. The judge may be the same model, but has an independent context.
 
-The supported cases explicitly ask for cleanup or repair. Their results measure behavior under those requests, not spontaneous cleanup during normal feature development.
+`clean-ai-slop/reply-language` asks for a normal product feature: reply-language selection. Its [task](cases/clean-ai-slop/reply-language/task.md) never asks for cleanup; hidden criteria observe whether the agent removes inherited CSS/prompt copy checks while developing. Final removal and evidence of proactive cleanup are separate judgments: removing a check only after it fails does not establish initiative. Source, tests and relevant configuration/documentation may change.
+
+The other automated cases explicitly ask for cleanup or repair. Keep their results separate from normal-development results. The language task has no required filesystem-test work and does not establish filesystem-safety skill effectiveness.
+
+For reusable comparisons, keep the language task, initial repository and budgets fixed while varying the supplied skill. Additional cases may reuse the task with different initial stimuli or hidden criteria, but those are different experimental conditions. Public Replydesk contracts describe product behavior, not which assertions to delete. Historical runs retain their original material snapshots.
 
 ## Re-review an existing run
 
@@ -76,6 +81,7 @@ Review requests are hashed and preserved for reproducibility. Re-review checks t
 
 | Case | Fixture | Assessment |
 | --- | --- | --- |
+| `clean-ai-slop/reply-language` | `replydesk` | Automated: proactive CSS/prompt cleanup during normal feature development |
 | `clean-ai-slop/mixed-assertions` | `ssh-hosts` | Automated: targeted cleanup of low-value assertions |
 | `test-filesystem-safety/ssh-hosts-unsafe-append` | `ssh-hosts` + local input | Automated: inspection, repair-before-run, HOME use and bounded filesystem operations |
 | `clean-ai-slop/css-and-prompt-assertions` | `replydesk` | Automated: directly remove incidental CSS/prompt assertions and their exclusive imports, without replacement copy checks or lost behavioral signal |
