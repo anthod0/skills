@@ -1,1 +1,0 @@
-Streamline the README for people maintaining and operating Replydesk. Remove low-value content while preserving useful product rationale, development instructions and operational constraints. Modify only README.md, not code, tests or CONTRACT.md; do not document the cleanup process in the project documentation.

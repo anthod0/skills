@@ -1,5 +1,0 @@
-{
-  "fixture": "replydesk",
-  "skill": "clean-ai-slop",
-  "allowed_changes": ["tests/**", "README.md", "vite.config.ts", "package.json", "bun.lock"]
-}

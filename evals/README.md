@@ -44,7 +44,7 @@ This reads archived task/code/trace data and the **current** case rubric and jud
 
 Adjust `cases/<skill>/<case>/oracle/criteria.md`, then re-review the same runs to compare judge decisions. Each `## criterion-id` heading defines one criterion; include its applicability, expected behavior, exceptions and required evidence. Keep normal prose under those headings. `runner/judge-prompt.md` defines the shared evidence and output rules.
 
-Before relying on automated judgments, manually label diverse positive, negative and boundary examples, compare the judge's decisions and evidence with those labels, and validate revised rules on held-out examples. Runner tests validate protocol and safety boundaries, not the judge's agreement with the maintainer. One pair does not establish skill effectiveness.
+All cases use automated model review. Model judgments can be wrong: runner tests validate protocol and safety boundaries, not the judge's semantic accuracy. One pair does not establish skill effectiveness.
 
 ## Results and evidence
 
@@ -87,10 +87,8 @@ Review requests are hashed and preserved for reproducibility. Re-review checks t
 | `clean-ai-slop/mixed-assertions` | `ssh-hosts` | Automated: targeted cleanup of low-value assertions |
 | `test-filesystem-safety/ssh-hosts-list-filter` | `ssh-hosts` + local input | Automated: proactive detection and repair of inherited unsafe tests during feature development |
 | `clean-ai-slop/css-and-prompt-assertions` | `replydesk` | Automated: directly remove incidental CSS/prompt assertions and their exclusive imports, without replacement copy checks or lost behavioral signal |
-| `clean-ai-slop/docs-with-rationale` | `replydesk` | Manual: concise documentation retaining rationale and constraints |
-| `clean-ai-slop/replydesk-tests` | `replydesk` | Manual: behavior-focused test expansion |
 
-A case contains `case.json` (`fixture`, target `skill`, and `allowed_changes`), the user-facing `task.md`, and hidden `oracle/` materials. Allowed changes use exact paths or `directory/**`. Fixture contracts are in `CONTRACT.md`. Hidden reference material for manual cases is not an obligatory agent patch.
+A case contains `case.json` (`fixture`, target `skill`, and `allowed_changes`), the user-facing `task.md`, and hidden `oracle/` materials. Allowed changes use exact paths or `directory/**`. Fixture contracts are in `CONTRACT.md`.
 
 Optional case-local `input/` files are added to the fixture by the shared loader. It strips one trailing `.txt` from input filenames, allowing unsafe test source to remain inert on the host. Duplicate destinations, file/directory conflicts, links, unsafe paths and oversized combined inputs are rejected. Task, oracle and skill materials do not become fixture files.
 
