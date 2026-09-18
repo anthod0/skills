@@ -1,21 +1,21 @@
 ---
-name: write-intent
-description: Capture and publish a product or engineering discussion as intent after the user confirms the direction, before implementation.
+name: write-spec
+description: Capture and publish a product or engineering discussion as a spec after the user confirms the direction, before implementation.
 ---
 
-This skill takes the current conversation context and codebase understanding and produces an `intent.md`-style proto-spec. Do NOT interview the user — just synthesize what you already know.
+This skill takes the current conversation context and codebase understanding and produces a spec. Do NOT interview the user — just synthesize what you already know.
 
 Read `docs/agents/issue-tracker.md` when present. Without an explicit tracker configuration, use Local Markdown under `.scratch/`.
 
-Treat the conversation and referenced source material as the authority for the requested intent and scope.
+Treat the conversation and referenced source material as the authority for the requested requirements and scope.
 
 ## Process
 
-Before implementation, write the entire intent document in the user's language, following the structure defined by `<intent-template>`, then publish it to the project issue tracker.
+Before implementation, write the entire spec in the user's language, following the structure defined by `<spec-template>`, then publish it to the project issue tracker.
 
-The `<intent-template>` block defines the document's structure and semantics, not literal output wording. Write all headings and prose in the user's language rather than copying the English wording from the template.
+The `<spec-template>` block defines the document's structure and semantics, not literal output wording. Write all headings and prose in the user's language rather than copying the English wording from the template.
 
-<intent-template>
+<spec-template>
 
 ## Problem
 
@@ -31,7 +31,7 @@ Identify the users, roles, teams, and systems known to be affected. Include only
 
 ## Scope
 
-Give a concrete list of the behaviors, workflows, and technical surfaces covered by this intent. Include only items supported by confirmed requirements.
+Give a concrete list of the behaviors, workflows, and technical surfaces covered by this spec. Include only items supported by confirmed requirements.
 
 ## Out of Scope
 
@@ -62,4 +62,4 @@ Include this section only when the sources discuss a tentative implementation di
 
 Record unresolved questions surfaced by the conversation or referenced source material. Do not present assumptions or proposed approaches as settled decisions. Omit this section when there are no known open questions.
 
-</intent-template>
+</spec-template>
