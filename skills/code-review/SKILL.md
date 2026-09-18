@@ -1,16 +1,14 @@
 ---
 name: code-review
-description: Review changes against repository standards and their originating spec.
+description: Review changes against repository standards and their originating spec. Use when the user wants to review a branch, a PR, work-in-progress changes, or asks to "review since X".
 ---
 
-Review the diff between `HEAD` and a fixed point the user supplies. Every invocation first selects a proportionate path:
+Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
 
-- **Lightweight verification** for small, local, low-risk changes.
-- **Two-axis review** for broader or riskier changes:
-  - **Standards** — does the code conform to this repo's documented coding standards?
-  - **Spec** — does the code faithfully implement the originating spec or PRD?
+- **Standards** — does the code conform to this repo's documented coding standards?
+- **Spec** — does the code faithfully implement the originating spec or PRD?
 
-Only the two-axis path uses parallel sub-agents, keeping the Standards and Spec contexts independent.
+Both axes run as **parallel sub-agents** so they don't pollute each other's context, then this skill aggregates their findings.
 
 Read `docs/agents/issue-tracker.md` when present. Without an explicit tracker configuration, resolve specs from Local Markdown under `.scratch/`; a GitHub remote alone never selects GitHub Issues.
 
@@ -24,26 +22,7 @@ Capture the diff command once: `git diff <fixed-point>...HEAD` (three-dot, so th
 
 Before going further, confirm the fixed point resolves (`git rev-parse <fixed-point>`) and the diff is non-empty. A bad ref or empty diff should fail here — not inside two parallel sub-agents.
 
-### 2. Select review intensity
-
-Assess the complete diff and commit list. Count changed files with `git diff --name-only <fixed-point>...HEAD` and changed lines by summing numeric additions and deletions from `git diff --numstat <fixed-point>...HEAD`.
-
-Use the **two-axis review** when any of these is true:
-
-- More than 2 files changed.
-- More than 50 lines were added or deleted in total.
-- The diff contains a binary file or another entry whose changed lines cannot be counted.
-- The change alters a public interface, persisted data or wire format, authorization or security boundary, concurrency behavior, filesystem safety boundary, dependency graph, build, deployment, or infrastructure.
-- The change introduces a migration, requires coordinated behavior across modules, is not easy to reason about locally, or lacks a focused existing check that can verify it.
-- The impact is uncertain.
-
-Use **lightweight verification** only when none of these conditions applies. Numerical size is the default gate, while risk always overrides it.
-
-For lightweight verification, inspect the diff and run the smallest relevant existing check. Report the result and any residual risk, then stop without spawning sub-agents.
-
-For the two-axis review, continue below.
-
-### 3. Identify the spec source
+### 2. Identify the spec source
 
 Look for the originating spec, in this order:
 
@@ -52,7 +31,7 @@ Look for the originating spec, in this order:
 3. A PRD/spec file under `docs/`, `specs/`, or `.scratch/` matching the branch name or feature.
 4. If nothing is found, ask the user where the spec is. If they say there isn't one, the **Spec** sub-agent will skip and report "no spec available".
 
-### 4. Identify the standards sources
+### 3. Identify the standards sources
 
 Anything in the repo that documents how code should be written, such as `CODING_STANDARDS.md` or `CONTRIBUTING.md`. When the diff adds or changes filesystem-touching tests, load the `test-filesystem-safety` skill and include it as a standards source; violations of its hard guardrail are blocking findings.
 
@@ -76,14 +55,14 @@ Each smell reads *what it is* → *how to fix*; match it against the diff:
 - **Middle Man** — a class or function that mostly just delegates onward. → cut it, call the real target direct.
 - **Refused Bequest** — a subclass or implementer that ignores or overrides most of what it inherits. → drop the inheritance, use composition.
 
-### 5. Spawn both sub-agents in parallel
+### 4. Spawn both sub-agents in parallel
 
 Send a single message with two `Agent` tool calls. Use the `general-purpose` subagent for both.
 
 **Standards sub-agent prompt** — include:
 
 - The full diff command and commit list.
-- The list of standards-source files you found in step 4, **plus the smell baseline from step 4** pasted in full — the sub-agent has no other access to it.
+- The list of standards-source files you found in step 3, **plus the smell baseline from step 3** pasted in full — the sub-agent has no other access to it.
 - The brief: "Report — per file/hunk where relevant — (a) every place the diff violates a documented standard: cite the standard (file + the rule); and (b) any baseline smell you spot: name it and quote the hunk. Distinguish hard violations from judgement calls — documented-standard breaches can be hard, but baseline smells are always judgement calls, and a documented repo standard overrides the baseline. Skip anything tooling enforces. Under 400 words."
 
 **Spec sub-agent prompt** — include:
@@ -94,13 +73,13 @@ Send a single message with two `Agent` tool calls. Use the `general-purpose` sub
 
 If the spec is missing, skip the Spec sub-agent and note this in the final report.
 
-### 6. Aggregate
+### 5. Aggregate
 
-Present the two reports under `## Standards` and `## Spec` headings, verbatim or lightly cleaned. Do **not** merge or rerank findings — the two axes are deliberately separate (see _Why two axes_).
+Present the two reports under `## Standards` and `## Spec` headings, verbatim or lightly cleaned. Do **not** merge or rerank findings — the two axes are deliberately separate.
 
 End with a one-line summary: total findings per axis, and the worst issue _within each axis_ (if any). Don't pick a single winner across axes — that's the reranking the separation exists to prevent.
 
-### 7. End the review round
+### 6. End the review round
 
 This report completes the implementation task's single review round; the parallel Standards and Spec axes are parts of that one round. Return the findings to the caller. After actionable findings are fixed, rerun the relevant tests and verification, then stop. Start another review round only when the user explicitly requests one.
 

@@ -1,6 +1,7 @@
 ---
 name: implement
 description: "Implement a piece of coding work based on user-confirmed requirements."
+disable-model-invocation: true
 ---
 
 Implement the user-confirmed work. If a spec exists for the work, read it in full and treat it as the source of truth. Choose and execute an implementation sequence that carries the work through its acceptance criteria.
