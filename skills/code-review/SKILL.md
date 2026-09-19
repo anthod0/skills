@@ -3,7 +3,7 @@ name: code-review
 description: Review changes against repository standards and their originating spec. Use when the user wants to review a branch, a PR, work-in-progress changes, or asks to "review since X".
 ---
 
-Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
+Two-axis review of the diff between the current working state (including uncommitted changes and untracked files) and a fixed point the user supplies:
 
 - **Standards** — does the code conform to this repo's documented coding standards?
 - **Spec** — does the code faithfully implement the originating spec or PRD?
@@ -18,9 +18,7 @@ Read `docs/agents/issue-tracker.md` when present. Without an explicit tracker co
 
 Whatever the user said is the fixed point — a commit SHA, branch name, tag, `main`, `HEAD~5`, etc. If they didn't specify one, ask for it.
 
-Capture the diff command once: `git diff <fixed-point>...HEAD` (three-dot, so the comparison is against the merge-base). Also note the list of commits via `git log <fixed-point>..HEAD --oneline`.
-
-Before going further, confirm the fixed point resolves (`git rev-parse <fixed-point>`) and the diff is non-empty. A bad ref or empty diff should fail here — not inside two parallel sub-agents.
+Before going further, capture the diff. Confirm the fixed point resolves and the diff is non-empty. A bad ref or empty diff should fail here — not inside two parallel sub-agents.
 
 ### 2. Identify the spec source
 
@@ -61,13 +59,13 @@ Send a single message with two `Agent` tool calls. Use the `general-purpose` sub
 
 **Standards sub-agent prompt** — include:
 
-- The full diff command and commit list.
+- The changes to review and, when relevant, the commit list.
 - The list of standards-source files you found in step 3, **plus the smell baseline from step 3** pasted in full — the sub-agent has no other access to it.
 - The brief: "Report — per file/hunk where relevant — (a) every place the diff violates a documented standard: cite the standard (file + the rule); and (b) any baseline smell you spot: name it and quote the hunk. Distinguish hard violations from judgement calls — documented-standard breaches can be hard, but baseline smells are always judgement calls, and a documented repo standard overrides the baseline. Skip anything tooling enforces. Under 400 words."
 
 **Spec sub-agent prompt** — include:
 
-- The diff command and commit list.
+- The changes to review and, when relevant, the commit list.
 - The path or fetched contents of the spec.
 - The brief: "Report: (a) requirements the spec asked for that are missing or partial; (b) behaviour in the diff that wasn't asked for (scope creep); (c) requirements that look implemented but where the implementation looks wrong. Quote the spec line for each finding. Under 400 words."
 
@@ -81,6 +79,6 @@ End with a one-line summary: total findings per axis, and the worst issue _withi
 
 ### 6. End the review round
 
-This report completes the implementation task's single review round; the parallel Standards and Spec axes are parts of that one round. Return the findings to the caller. After actionable findings are fixed, rerun the relevant tests and verification, then stop. Start another review round only when the user explicitly requests one.
+This report completes the implementation task's single review round; the parallel Standards and Spec axes are parts of that one round. Return the findings to the caller. After actionable findings are fixed, rerun the relevant tests and verification, then end the review round. Start another review round only when the user explicitly requests one.
 
 If review-driven fixes materially expand the original scope or leave significant uncertainty, finish verification and report the residual risks instead of extending the review cycle.
