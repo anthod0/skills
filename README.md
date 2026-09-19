@@ -12,7 +12,6 @@ Personal skills for AI agents, includes original skills and adaptations of [Matt
 | [`write-spec`](skills/write-spec/SKILL.md)                         | Capture the current discussion as a spec. |
 | [`codebase-design`](skills/codebase-design/SKILL.md)               | Adapted from Matt Pocock, simplified to avoid overengineering.                                                                                                        |
 | [`test-filesystem-safety`](skills/test-filesystem-safety/SKILL.md) | Add safety guardrails to tests that interact with real files.                                                                                                         |
-| [`design-handoff`](skills/design-handoff/SKILL.md)                 | Run `grill-me` through a shared document, handling multiple questions at once without losing focus.                                                                   |
 | [`ui-debug`](skills/ui-debug/SKILL.md)                            | Develop UIs with live feedback.                                                                                      |
 | [`pontia-workflow`](skills/pontia-workflow/SKILL.md)               | Run multi-stage agent workflows orchestrated by Pontia.                                                                                                               |
 

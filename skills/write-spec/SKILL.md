@@ -1,6 +1,6 @@
 ---
 name: write-spec
-description: Capture and publish a product or engineering discussion as a spec after the user confirms the direction, before implementation.
+description: Capture user-confirmed intent after a discussion. Use when the user wants to publish a spec, PRD, requirements, or design proposal.
 ---
 
 This skill takes the current conversation context and codebase understanding and produces a spec. Do NOT interview the user — just synthesize what you already know.
@@ -12,6 +12,8 @@ Treat the conversation and referenced source material as the authority for the r
 ## Process
 
 Before implementation, write the entire spec in the user's language, following the structure defined by `<spec-template>`, then publish it to the project issue tracker.
+
+When recording the spec, use `/domain-modeling` as needed to update `CONTEXT.md` with confirmed domain terms and record confirmed architectural decisions that meet its ADR criteria. Read the relevant existing domain documents first; reference them rather than duplicating their full contents in the spec. Use this pass to capture confirmed knowledge not yet reflected in those documents; it is not a reason to defer updates during discussion. Leave documents unchanged when there is nothing new to record. Keep tentative terms and decisions in the spec's proposed approach or open questions, not in the glossary or accepted ADRs. This is a documentation sync, not a new design interview.
 
 The `<spec-template>` block defines the document's structure and semantics, not literal output wording. Write all headings and prose in the user's language rather than copying the English wording from the template.
 
