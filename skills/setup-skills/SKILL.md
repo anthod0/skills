@@ -80,7 +80,7 @@ Never create `AGENTS.md` when `CLAUDE.md` already exists (or vice versa) — alw
 
 If an `## Agent skills` block already exists in the chosen file, update its contents in-place rather than appending a duplicate. Don't overwrite user edits to the surrounding sections.
 
-Keep this block as a short operational entrypoint. For workspaces, include the creation command, destination, non-obvious argument defaults (such as the base revision defaulting to the calling checkout's HEAD), and any essential project-specific manual step. Put implementation details, prerequisites, and troubleshooting in the script's help and diagnostics.
+Keep this block as a short operational entrypoint. For workspaces, include the creation command, destination, non-obvious argument defaults (such as the base revision defaulting to the calling checkout's HEAD), and any essential project-specific manual step.
 
 The block:
 
