@@ -1,35 +1,19 @@
 # Scheme 1 — worktree + copy ignored files
 
-Linked git worktree. Tracked files from `git worktree add`. Ignored files copied with `cp -a`. Use when CoW is unavailable.
+Linked Git worktree with ordinary copies of independent local resources and symbolic links to shared resources. Use when CoW is unavailable.
 
 ## Create
 
-Primary checkout must be a git repo (not itself a linked worktree if the tool requires a primary — use `git rev-parse --show-toplevel`).
+Copy local resources from the primary checkout. Accept a workspace name and an optional base revision, defaulting to the calling checkout's HEAD, including when called from a linked worktree. Resolve the base there before changing directories. Uncommitted code changes are not carried into the new worktree.
 
-```bash
-src=$(git rev-parse --show-toplevel)
-repo=$(basename "$src")
-name=$1
-base=${2:-HEAD}
-dest="$HOME/worktrees/$repo/$name"
-branch="agent/$name"
+Create a linked worktree at `<workspace-root>/<repo>/<name>`, where `<repo>` is the primary checkout's directory name, creating missing parent directories. Use a new branch named `agent/<name>` at the selected base revision.
 
-mkdir -p "$(dirname "$dest")"
-git worktree add -b "$branch" "$dest" "$base"
+Copy each path selected for independent use during setup from the source checkout to the same relative location in the workspace. Skip copy paths that no longer exist, create missing parent directories, and preserve file metadata and symbolic links. For each resource selected for sharing, create a symbolic link at its corresponding workspace path to the authoritative location recorded during setup. Print the destination path to standard output only after creation succeeds.
 
-# COPY_PATHS filled at setup from the project's required ignored paths
-for rel in "${COPY_PATHS[@]}"; do
-  src_path="$src/$rel"
-  [ -e "$src_path" ] || continue
-  mkdir -p "$(dirname "$dest/$rel")"
-  cp -a "$src_path" "$dest/$rel"
-done
-```
-
-`$src` is the primary checkout. Print `$dest` on stdout when done.
-
-Fail if `$dest` exists, if `$branch` already exists, or if `git worktree add` fails. Do not fall back to a second clone.
+Fail if the destination or branch already exists, or if worktree creation, copying, or linking fails. Do not fall back to a second clone.
 
 ## Creation script
 
-Write a bash script at the path selected during setup that implements Create above, with `COPY_PATHS` hardcoded. `chmod +x`.
+Write an executable Bash script at the path selected during setup that implements the creation behavior above. Embed the selected workspace root, copy list, and shared-link mappings. Resolve the source checkout and workspace root independently of the caller's working directory.
+
+Include the checks and applicable repairs in [Runtime relocation](./setup.md#runtime-relocation) after copying and before reporting success.

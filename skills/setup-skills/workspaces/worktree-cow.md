@@ -1,41 +1,21 @@
 # Scheme 2 — worktree + CoW ignored files
 
-Linked git worktree. Tracked files from `git worktree add`. Ignored files cloned with filesystem CoW so they share blocks until edited.
+Linked Git worktree with CoW copies of independent local resources and symbolic links to shared resources. CoW copies share blocks until edited.
 
-Requires CoW on the **repo's volume** (APFS `cp -c`, or Linux `cp --reflink=always` on btrfs/XFS). Setup already probed this; if a later CoW copy fails, abort — do not silently `cp` without reflink.
+Requires CoW on the **repo's volume**, such as APFS cloning or Linux reflinks on btrfs/XFS. Abort if CoW copying fails, without falling back to an ordinary copy.
 
 ## Create
 
-```bash
-src=$(git rev-parse --show-toplevel)
-repo=$(basename "$src")
-name=$1
-base=${2:-HEAD}
-dest="$HOME/worktrees/$repo/$name"
-branch="agent/$name"
+Copy local resources from the primary checkout. Accept a workspace name and an optional base revision, defaulting to the calling checkout's HEAD, including when called from a linked worktree. Resolve the base there before changing directories. Uncommitted code changes are not carried into the new worktree.
 
-mkdir -p "$(dirname "$dest")"
-git worktree add -b "$branch" "$dest" "$base"
+Create a linked worktree at `<workspace-root>/<repo>/<name>`, where `<repo>` is the primary checkout's directory name, creating missing parent directories. The destination must be on the same filesystem as the source. Use a new branch named `agent/<name>` at the selected base revision.
 
-cow_cp() {
-  if cp --reflink=always -a "$1" "$2" 2>/dev/null; then return 0; fi
-  if cp -c -R "$1" "$2" 2>/dev/null; then return 0; fi
-  echo "CoW copy failed: $1" >&2
-  exit 1
-}
+CoW-copy each path selected for independent use during setup from the source checkout to the same relative location in the workspace. Skip copy paths that no longer exist, create missing parent directories, and preserve file metadata and symbolic links. For each resource selected for sharing, create a symbolic link at its corresponding workspace path to the authoritative location recorded during setup. Print the destination path to standard output only after creation succeeds.
 
-for rel in "${COPY_PATHS[@]}"; do
-  src_path="$src/$rel"
-  [ -e "$src_path" ] || continue
-  mkdir -p "$(dirname "$dest/$rel")"
-  cow_cp "$src_path" "$dest/$rel"
-done
-```
-
-`$src` is the primary checkout. Print `$dest` on stdout when done.
-
-Fail if `$dest` exists or `$branch` already exists. Destination must be on the same filesystem as `$src`.
+Fail if the destination or branch already exists, or if worktree creation, CoW copying, or linking fails.
 
 ## Creation script
 
-Write a bash script at the path selected during setup that implements Create above, with `COPY_PATHS` hardcoded. `chmod +x`.
+Write an executable Bash script at the path selected during setup that implements the creation behavior above. Embed the selected workspace root, copy list, and shared-link mappings. Resolve the source checkout and workspace root independently of the caller's working directory.
+
+Include the checks and applicable repairs in [Runtime relocation](./setup.md#runtime-relocation) after copying and before reporting success.
