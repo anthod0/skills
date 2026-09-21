@@ -80,6 +80,8 @@ Never create `AGENTS.md` when `CLAUDE.md` already exists (or vice versa) — alw
 
 If an `## Agent skills` block already exists in the chosen file, update its contents in-place rather than appending a duplicate. Don't overwrite user edits to the surrounding sections.
 
+Keep this block as a short operational entrypoint. For workspaces, include the creation command, destination, non-obvious argument defaults (such as the base revision defaulting to the calling checkout's HEAD), and any essential project-specific manual step. Put implementation details, prerequisites, and troubleshooting in the script's help and diagnostics.
+
 The block:
 
 ```markdown
@@ -95,9 +97,9 @@ The block:
 
 ### Workspaces
 
-Workspaces are created under [the selected workspace root]/<repo>/<name>.
-When the user wants a worktree or an isolated workspace, create it with [the generated script's actual path, including its required and optional arguments].
-[Optional: Describe any known cases that require manual follow-up after the script runs. Omit if none.]
+When asked for a worktree or isolated workspace, run [actual script path and arguments].
+Destination: `[selected workspace root]/<repo>/<name>`.
+[Optional: In one short sentence, state a project-specific action the agent must take that the script cannot automate. Omit if none.]
 ```
 
 Then write the docs files using the seed templates in this skill folder as a starting point:
