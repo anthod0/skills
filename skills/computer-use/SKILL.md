@@ -34,5 +34,5 @@ Use this mode when automation requires a custom script.
   - `executablePath`: locally resolved system Chromium.
   - `headless: false`.
   - `args: ['--profile-directory=Default']`.
-- Reuse the existing agent session across turns. Do not launch competing processes against its profile, remove profile locks, or kill an existing browser without approval.
+- If the browser is already open, reuse it.
 - Profile writes inherent in browsing are expected; unrelated account changes or destructive actions are not implicitly authorized.
