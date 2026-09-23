@@ -19,7 +19,7 @@ Personal skills for AI agents, includes original skills and adaptations of [Matt
 
 | Skill                                   | Description                                                               |
 | --------------------------------------- | ------------------------------------------------------------------------- |
-| [`computer-use`](skills/computer-use/SKILL.md) | Standardize desktop browser automation while using the real user profile. |
+| [`computer-use`](skills/computer-use/SKILL.md) | Automate Chromium and operate native niri/Wayland desktops. |
 
 ### Content Creation
 
