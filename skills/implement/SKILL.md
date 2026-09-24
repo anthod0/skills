@@ -15,4 +15,5 @@ After completing the required code changes, finish in this order:
 3. Run `/clean-ai-slop` and apply the required cleanup.
 4. Run `/code-review`.
 5. Fix any issues found and rerun the relevant checks. Do not run another review unless the user explicitly requests it.
-6. Commit.
+6. Update the associated spec status if exists.
+7. Commit.
