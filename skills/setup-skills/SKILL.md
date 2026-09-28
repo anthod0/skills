@@ -21,11 +21,10 @@ This is a prompt-driven skill, not a deterministic script. Explore, confirm the 
 Look at the current repo to understand its starting state. Read whatever exists; don't assume:
 
 - `AGENTS.md` and `CLAUDE.md` at the repo root — does either exist? Is there already an `## Agent skills` section or an explicit tracker choice in either?
-- `CONTEXT.md` and `CONTEXT-MAP.md` at the repo root
-- `docs/adr/` and any `src/*/docs/adr/` directories
+- `CONTEXT.md` at the repo root
+- `docs/adr/`
 - `docs/agents/` — does this skill's prior output already exist?
 - `.scratch/` — sign that a local-markdown issue tracker convention is already in use
-- Monorepo signals — a `pnpm-workspace.yaml`, a `workspaces` field in `package.json`, or a populated `packages/*` with its own `src/`. Present only in a genuinely large multi-package repo; their absence means single-context, which is almost every repo.
 - The workspace creation script — check the path specified by the user or recorded in project instructions, otherwise `scripts/create-workspace`. Is it already initialized?
 - Workspace destination — check whether the user or project instructions already specify where new workspaces should live; otherwise use `$HOME/worktrees` as the workspace root.
 - CoW availability — determine whether the source checkout and selected destination meet the [CoW requirements](./workspaces/setup.md#cow-requirements).
@@ -35,7 +34,7 @@ Look at the current repo to understand its starting state. Read whatever exists;
 
 Summarise what's present and what's missing. Then take the sections in order — one section, one answer, then the next.
 
-Lead each section with the recommended answer so the user can accept it in a word. Give a one-line explainer only when the choice genuinely branches; skip asking about the domain-doc layout when exploration found no monorepo.
+Lead each section with the recommended answer so the user can accept it in a word. Give a one-line explainer only when the choice genuinely branches. Do not ask about the domain-doc layout; it is always single-context.
 
 **Section A — Issue tracker.**
 
@@ -50,9 +49,7 @@ Recommend **Local Markdown** and ask the user to accept it or explicitly choose 
 
 Record the confirmed choice in `docs/agents/issue-tracker.md`.
 
-**Section B — Domain docs.** Default to **single-context** — one `CONTEXT.md` + `docs/adr/` at the repo root. This fits almost every repo; write it without asking.
-
-Offer **multi-context** — a root `CONTEXT-MAP.md` pointing to per-context `CONTEXT.md` files — only when exploration found monorepo signals. Then confirm which layout they want.
+**Section B — Domain docs.** Use one `CONTEXT.md` and `docs/adr/` at the repo root. Write this single-context layout without asking.
 
 **Section C — Workspaces.**
 
@@ -93,7 +90,7 @@ The block:
 
 ### Domain docs
 
-[one-line summary of layout — "single-context" or "multi-context"]. See `docs/agents/domain.md`.
+[one-line summary of the single-context layout]. See `docs/agents/domain.md`.
 
 ### Workspaces
 

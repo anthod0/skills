@@ -1,6 +1,6 @@
 ---
 name: domain-modeling
-description: Build and sharpen a project's domain model. Use when the user wants to pin down domain terminology or a ubiquitous language, record an architectural decision, or when another skill needs to maintain the domain model.
+description: Build and sharpen a project's domain model. Use when the user wants to pin down domain terminology or a ubiquitous language, maintain the architectural decisions that currently govern a system, or when another skill needs to maintain the domain model.
 ---
 
 # Domain Modeling
@@ -9,7 +9,7 @@ Actively build and sharpen the project's domain model as you design. This is the
 
 ## File structure
 
-Most repos have a single context:
+Each repo has a single domain context:
 
 ```
 /
@@ -21,23 +21,7 @@ Most repos have a single context:
 └── src/
 ```
 
-If a `CONTEXT-MAP.md` exists at the root, the repo has multiple contexts. The map points to where each one lives:
-
-```
-/
-├── CONTEXT-MAP.md
-├── docs/
-│   └── adr/                          ← system-wide decisions
-├── src/
-│   ├── ordering/
-│   │   ├── CONTEXT.md
-│   │   └── docs/adr/                 ← context-specific decisions
-│   └── billing/
-│       ├── CONTEXT.md
-│       └── docs/adr/
-```
-
-Create files lazily — only when you have something to write. If no `CONTEXT.md` exists, create one when the first term is resolved. If no `docs/adr/` exists, create it when the first ADR is needed.
+Create files lazily — only when you have something to write. If no root `CONTEXT.md` exists, create it when the first term is resolved. If no root `docs/adr/` exists, create it when the first ADR is needed.
 
 ## During the session
 
@@ -63,7 +47,9 @@ When a term is resolved, update `CONTEXT.md` right there. Don't batch these up �
 
 `CONTEXT.md` should be totally devoid of implementation details. Do not treat `CONTEXT.md` as a spec, a scratch pad, or a repository for implementation decisions. It is a glossary and nothing else.
 
-### Offer ADRs sparingly
+### Maintain ADRs sparingly
+
+ADRs are the concise set of architectural decisions that currently govern the system and the reasons for them. They are not an immutable decision log.
 
 Only offer to create an ADR when all three are true:
 
@@ -71,4 +57,14 @@ Only offer to create an ADR when all three are true:
 2. **Surprising without context** — a future reader will wonder "why did they do it this way?"
 3. **The result of a real trade-off** — there were genuine alternatives and you picked one for specific reasons
 
-If any of the three is missing, skip the ADR. Use the format in [ADR-FORMAT.md](./ADR-FORMAT.md).
+Then check that the proposed content is stable:
+
+1. Can multiple implementations satisfy the decision?
+2. Would an implementation-only refactor leave the ADR unchanged?
+3. Would violating the statement actually change the architecture?
+
+If any admission criterion or stability check fails, skip the ADR. Put the information in a spec, current-state technical document, issue, or the code instead.
+
+ADRs contain stable architectural boundaries, authorities, invariants, consequential choices, and the reasons for those choices. They exclude implementation status, migration steps, unresolved questions, future plans, detailed call sequences, volatile protocol details, and code-layout descriptions.
+
+When a governing decision changes, edit, merge, or delete the affected ADRs so the set remains current; Git provides the history. Such changes should be infrequent. Normal feature work, implementation progress, and implementation-only refactoring do not require ADR updates. Use the format in [ADR-FORMAT.md](./ADR-FORMAT.md).
