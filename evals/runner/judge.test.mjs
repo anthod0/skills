@@ -53,7 +53,7 @@ async function withArchive(run) {
     const inputsText = JSON.stringify(inputs);
     const original = {
       ...originalSelection,
-      case: "clean-ai-slop/mixed-assertions",
+      case: "write-good-test/mixed-assertions",
       sourceHash: createHash("sha256").update(inputsText).digest("hex"),
     };
     const files = {

@@ -1,9 +1,9 @@
 import { changesBetween } from "./submission.mjs";
 
 export const supportedCases = [
-  "clean-ai-slop/mixed-assertions",
-  "clean-ai-slop/css-and-prompt-assertions",
-  "clean-ai-slop/reply-language",
+  "write-good-test/mixed-assertions",
+  "write-good-test/css-and-prompt-assertions",
+  "write-good-test/reply-language",
   "test-filesystem-safety/ssh-hosts-list-filter",
 ];
 export const conditions = ["without-skill", "with-skill"];
