@@ -1,3 +1,3 @@
 # Rules
 
-- When modifying skills, only edit the `skills/` directory in this repository. Do not modify skills already configured by the user.
+- Modify skill source files in this repository, not the user's installed or globally configured skills.

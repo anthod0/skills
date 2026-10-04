@@ -8,7 +8,8 @@ Personal skills for AI agents, includes original skills and adaptations of [Matt
 
 | Skill                                                       | Description                                                                                                                                                           |
 | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`clean-ai-slop`](skills/clean-ai-slop/SKILL.md)                   | Remove AI slop for tests and documents.                                                                                                                               |
+| [`write-good-docs`](skills/write-good-docs/SKILL.md) | Write concise, code-grounded documentation that adds information beyond the implementation. |
+| [`write-good-test`](skills/write-good-test/SKILL.md) | Write risk-based behavioral tests that detect functional regressions. |
 | [`write-spec`](skills/write-spec/SKILL.md)                         | Capture the current discussion as a spec. |
 | [`implement`](skills/implement/SKILL.md) | Implement coding work based on user-confirmed requirements. |
 | [`code-review`](skills/code-review/SKILL.md) | Review changes against repository standards and their originating spec. Simplified to avoid overengineering. |

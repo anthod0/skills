@@ -1,6 +1,6 @@
 ---
 name: write-spec
-description: Capture user-confirmed intent after a discussion. Use when the user wants to publish a spec, PRD, requirements, or design proposal.
+description: Read this skill when writing a spec, PRD, requirements document, or design proposal to capture user-confirmed intent from the discussion. Not applicable to README files, usage guides, or similar documentation.
 ---
 
 This skill takes the current conversation context and codebase understanding and produces a spec. Do NOT interview the user — just synthesize what you already know.
