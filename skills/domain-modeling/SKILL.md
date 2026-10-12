@@ -49,6 +49,8 @@ When a term is resolved, update `CONTEXT.md` right there. Don't batch these up â
 
 ### Maintain ADRs sparingly
 
+Before creating, changing, or deleting an ADR, read and apply [`/decision-boundaries`](../decision-boundaries/SKILL.md).
+
 ADRs are the concise set of architectural decisions that currently govern the system and the reasons for them. They are not an immutable decision log.
 
 Only offer to create an ADR when all three are true:

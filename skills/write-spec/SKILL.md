@@ -3,7 +3,7 @@ name: write-spec
 description: Read this skill when writing a spec, PRD, requirements document, or design proposal to capture user-confirmed intent from the discussion. Not applicable to README files, usage guides, or similar documentation.
 ---
 
-This skill takes the current conversation context and codebase understanding and produces a spec. Do NOT interview the user — just synthesize what you already know.
+This skill takes the current conversation context and codebase understanding and produces a spec. Before synthesizing it, read and apply [`/decision-boundaries`](../decision-boundaries/SKILL.md). Do not conduct a general requirements interview; ask only for agreement required by those boundaries. If a decision remains blocked, stop before publishing the spec.
 
 Read `docs/agents/issue-tracker.md` when present. Without an explicit tracker configuration, use Local Markdown under `.scratch/`.
 
