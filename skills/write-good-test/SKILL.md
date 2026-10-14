@@ -43,6 +43,8 @@ Test "Insufficient funds cause a transfer to fail," not "The transfer function c
 
 When functionality is unchanged, renaming, splitting functions, or rewriting internals should not break tests. Do not treat internal call order, private state, or incidental interface structure as expected outcomes.
 
+Do not add or retain tests merely asserting that a removed implementation is absent. Test current behavior instead; assert absence only when it is an explicit functional, security, or public compatibility requirement.
+
 ## Be clear, stable, and non-redundant
 
 - **Clear:** The name and body reveal the scenario, action, and expected outcome; failures make the broken behavior easy to identify. Use "Rejects transfers with insufficient funds," not just "transfer test."
