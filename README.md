@@ -14,7 +14,6 @@ Personal skills for AI agents.
 | [`write-spec`](skills/write-spec/SKILL.md)                         | Capture the current discussion as a spec and split a spec into tickets. |
 | [`implement`](skills/implement/SKILL.md) | Implement coding work based on user-confirmed requirements. |
 | [`code-review`](skills/code-review/SKILL.md) | Review changes against repository standards and their originating spec. Simplified to avoid overengineering. |
-| [`codebase-design`](skills/codebase-design/SKILL.md)               | Adapted from Matt Pocock, simplified to avoid overengineering.                                                                                                        |
 | [`domain-modeling`](skills/domain-modeling/SKILL.md) | Define domain terminology and record architectural decisions. |
 | [`research`](skills/research/SKILL.md) | Investigate questions using primary sources and save cited findings in the repo. |
 | [`test-filesystem-safety`](skills/test-filesystem-safety/SKILL.md) | Add safety guardrails to tests that interact with real files.                                                                                                         |
