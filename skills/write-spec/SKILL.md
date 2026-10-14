@@ -7,6 +7,8 @@ This skill takes the current conversation context and codebase understanding and
 
 Read `docs/agents/issue-tracker.md` when present. Without an explicit tracker configuration, use Local Markdown under `.scratch/`.
 
+When the user asks to split a spec into issues or tickets, read and follow [TICKETS.md](TICKETS.md).
+
 Treat the conversation and referenced source material as the authority for the requested requirements and scope.
 
 ## Process
