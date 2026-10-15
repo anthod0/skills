@@ -211,7 +211,7 @@ test("unavailable post-run authentication withholds session and file content", (
   assert.equal(assessAgent(archived, selection).ok, false);
 });
 
-test("review invocations disable all tools and discovered resources; skills cannot enter a review", () => {
+test("review agents receive read/bash and no discovered resources or supplied skills", () => {
   const request = {
     ...selection,
     thinking: "high",
@@ -220,7 +220,6 @@ test("review invocations disable all tools and discovered resources; skills cann
   };
   const args = piArguments(request);
   for (const flag of [
-    "--no-tools",
     "--no-skills",
     "--no-extensions",
     "--no-context-files",
@@ -228,8 +227,10 @@ test("review invocations disable all tools and discovered resources; skills cann
     "--session",
   ])
     assert.ok(args.includes(flag));
-  assert.equal(args[args.indexOf("--system-prompt") + 1], request.systemPrompt);
-  assert.equal(args.includes("--tools"), false);
+  assert.equal(args[args.indexOf("--append-system-prompt") + 1], request.systemPrompt);
+  assert.equal(args.includes("--system-prompt"), false);
+  assert.equal(args[args.indexOf("--tools") + 1], "read,bash");
+  assert.equal(args.includes("--no-tools"), false);
   assert.throws(() => piArguments({ ...request, skills: { "example/SKILL.md": "hidden" } }));
   const agent = piArguments({
     ...selection,

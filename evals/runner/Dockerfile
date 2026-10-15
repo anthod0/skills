@@ -5,7 +5,7 @@ RUN apt-get update \
 RUN npm install --global --ignore-scripts @earendil-works/pi-coding-agent@1.2.0 bun@1.4.0 \
     && cd /usr/local/lib/node_modules/bun && node install.js
 WORKDIR /harness
-COPY workspace.mjs pi-entry.mjs files.mjs auth.mjs agent-result.mjs session.mjs ./
+COPY workspace.mjs pi-entry.mjs files.mjs auth.mjs agent-result.mjs session.mjs review-files.mjs ./
 ENV PI_CODING_AGENT_DIR=/run/pi-agent PI_OFFLINE=1 PI_TELEMETRY=0
 USER node
 WORKDIR /workspace

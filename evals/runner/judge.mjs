@@ -6,13 +6,12 @@ import { readRegular, readTree } from "./files.mjs";
 import { readAuth, redact } from "./auth.mjs";
 import { buildImage, runPiContainer } from "./docker.mjs";
 import { parseAgentOutput, assessAgent } from "./agent-result.mjs";
-import { sessionMessages } from "./session.mjs";
+import { writeReviewFiles } from "./review-files.mjs";
 import { changesBetween, checkScope } from "./submission.mjs";
 import {
   supportedCases,
   conditions,
   criterionIds,
-  reviewMaterial,
   reviewRequest,
   parseReview,
   reviewStatus,
@@ -104,14 +103,14 @@ export async function reviewRun(
         )
           throw new Error("Changes do not match initial files and agent export");
         result.scope = checkScope(changes, inputs.manifest.allowed_changes);
-        const material = reviewMaterial(inputs, output);
-        const request = reviewRequest(prompt, criteria, material);
+        const request = reviewRequest(prompt, criteria, inputs, output);
         const destination = join(reviewRoot, condition);
         await mkdir(destination);
+        await writeReviewFiles(request.reviewFiles, join(destination, "materials"));
         const serialized = JSON.stringify(request);
         await writeFile(join(destination, "request.json"), serialized + "\n");
         result.requestHash = hash(serialized);
-        prepared.push({ result, material, request, destination });
+        prepared.push({ result, request, destination });
       } catch (error) {
         result.status = "error";
         result.error = error.message;
@@ -123,7 +122,7 @@ export async function reviewRun(
       if (image) report.image = image;
       else Object.assign(report, await buildImage(reviewRoot, signal));
     }
-    for (const { result, material, request, destination } of prepared) {
+    for (const { result, request, destination } of prepared) {
       if (signal?.aborted) throw new Error("Interrupted");
       const started = Date.now();
       try {
@@ -152,16 +151,9 @@ export async function reviewRun(
         await writeFile(join(destination, "session.jsonl"), output.sessionJsonl ?? "");
         if (execution.cleanupFailed) throw new Error("Judge container cleanup failed");
         result.judge = assessAgent(output, selection);
-        const messages = sessionMessages(output).filter((message) => message.role === "assistant");
-        if (
-          !result.judge.ok ||
-          output.runtime.mode !== "review" ||
-          messages.length !== 1 ||
-          result.judge.toolCalls !== 0 ||
-          messages[0].content.some((part) => part.type === "toolCall")
-        )
-          throw new Error("Judge must finish one response without tools or compaction");
-        result.behavior = parseReview(result.judge.finalResponse, criteria, material);
+        if (!result.judge.ok || output.runtime.mode !== "review")
+          throw new Error(result.judge.reason ?? "Judge did not complete its review");
+        result.behavior = parseReview(result.judge.finalResponse, criteria, request.reviewFiles);
         result.status = "reviewed";
       } catch (error) {
         result.status = "error";

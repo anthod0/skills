@@ -1,6 +1,6 @@
 # External-task behavior evaluations
 
-Compare how agents work with and without a target skill on fixed external tasks. An independent, tool-free model reviews code changes and the operation trace against case-specific behavioral criteria. The runner does not execute official benchmark grading or reference-answer validation, and does not certify task correctness.
+Compare how agents work with and without a target skill on fixed external tasks. An independent Pi judge agent uses read/bash to inspect material files against case-specific behavioral criteria. The runner does not execute official benchmark grading or reference-answer validation, and does not certify task correctness.
 
 ## Tasks
 
@@ -51,11 +51,11 @@ Git-ignored `evals/runs/external-<timestamp>-<id>/` archives contain:
 - `inputs.json`: task, original dataset instance, rubric, skills and runner source snapshot; `result.json` records its hash.
 - Build contexts/logs and `environment.json`: resolved image IDs/digests and runtime limits. SWT tasks also archive the upstream environment build plan.
 - Each condition's `agent.json`, Pi's native `session.jsonl` (with credential redaction), and `submission.patch`. Export compares against the initial commit, so agent commits do not erase the patch. Rename sources and destinations both enter scope/evidence.
-- Each condition's `review-request.json`, `judge.json` and native `judge-session.jsonl`, when review reaches those steps.
+- Each condition's `review-request.json`, `materials/` files, `judge.json` and native `judge-session.jsonl`, when review reaches those steps.
 
 `result.json` records execution validity, editing scope and per-criterion behavior verdicts. Status/exit codes are `reviewed`/0, `violated`/1, `error`/2 and `needs-review`/3; see the [shared evidence rules](../README.md#results-and-evidence). Preparation returns `prepared`/0 after image builds succeed; it does not establish that tests can run or that a reference answer succeeds.
 
-Behavioral evidence contains complete before/after text for changed files and native session messages, including prompt/tool declarations and tool calls/results, not a full repository snapshot. Evidence references use `session:<line>` for the original session line. Branched, compacted or context-edited sessions are rejected. Missing context must remain insufficient evidence. Review requests preserve the complete evidence without a separate request-size cap or truncation; model context-limit failures are review errors. Model judgments can be wrong, and one pair does not establish skill effectiveness. This runner does not support the fixture runner's re-review command.
+The judge receives paths to the original task, complete native session JSONL, initial changed-file contents and complete before/after changes under `/workspace/materials/`, not a full repository snapshot. It reads and processes these files itself; the runner does not extract session entries into an evidence array. Verdicts cite material paths and original line numbers or ranges. The [shared judge tool and evidence boundaries](../README.md#execution-and-credential-boundaries) apply. Branched, compacted or context-edited sessions are rejected. Missing context must remain insufficient evidence. There is no separate review-request size cap or truncation; model context-limit failures are review errors. Model judgments can be wrong, and one pair does not establish skill effectiveness. This runner does not support the fixture runner's re-review command.
 
 ## Isolation and reproducibility
 

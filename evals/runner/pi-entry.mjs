@@ -6,6 +6,7 @@ import { selectAuth, redact } from "./auth.mjs";
 import { serializeAgentOutput } from "./agent-result.mjs";
 import { prepareWorkspace, generatedPaths } from "./workspace.mjs";
 import { sessionPath, readSession } from "./session.mjs";
+import { writeReviewFiles, verifyReviewFiles } from "./review-files.mjs";
 
 export function piArguments({ provider, model, thinking, skills, systemPrompt }) {
   const skillArgs = Object.keys(skills)
@@ -31,7 +32,7 @@ export function piArguments({ provider, model, thinking, skills, systemPrompt })
     "--no-context-files",
     ...(systemPrompt === undefined
       ? ["--tools", "read,write,edit,bash", ...skillArgs]
-      : ["--no-tools", "--system-prompt", systemPrompt]),
+      : ["--tools", "read,bash", "--append-system-prompt", systemPrompt]),
     "--provider",
     provider,
     "--model",
@@ -48,11 +49,23 @@ async function main() {
     input += chunk;
     if (Buffer.byteLength(input) > 16 * 1024 * 1024) throw new Error("Payload too large");
   }
-  const { provider, model, thinking, budgetSeconds, auth, task, files, skills, systemPrompt } =
-    JSON.parse(input);
+  const {
+    provider,
+    model,
+    thinking,
+    budgetSeconds,
+    auth,
+    task,
+    files,
+    skills,
+    systemPrompt,
+    reviewFiles,
+  } = JSON.parse(input);
   const args = piArguments({ provider, model, thinking, skills, systemPrompt });
   if (systemPrompt !== undefined && Object.keys(files).length)
-    throw new Error("Review workspace must be empty");
+    throw new Error("Review workspace must contain only supplied materials");
+  if (systemPrompt === undefined && reviewFiles !== undefined)
+    throw new Error("Review materials require the judge profile");
   if (
     typeof provider !== "string" ||
     typeof model !== "string" ||
@@ -73,6 +86,7 @@ async function main() {
     }),
     { mode: 0o600, flag: "wx" },
   );
+  if (systemPrompt !== undefined) await writeReviewFiles(reviewFiles);
   await writeTree("/workspace", files);
   await writeTree("/run/pi-agent/skills", skills);
   for (const args of [
@@ -136,7 +150,11 @@ async function main() {
   let exported;
   let artifactError;
   try {
-    exported = await readTree("/workspace", { ignoreGit: true, excludeRoots: generatedPaths });
+    if (systemPrompt !== undefined) {
+      await verifyReviewFiles(reviewFiles);
+      exported = {};
+    } else
+      exported = await readTree("/workspace", { ignoreGit: true, excludeRoots: generatedPaths });
     const serialized = JSON.stringify(exported);
     if (redact(serialized, auth, currentAuth) !== serialized)
       throw new Error("Credential in workspace");

@@ -3,7 +3,7 @@ import test from "node:test";
 import { sessionEntries, sessionMessages } from "./session.mjs";
 import { sessionJsonl, editSession } from "./test-session.mjs";
 import { serializeAgentOutput, parseAgentOutput, assessAgent } from "./agent-result.mjs";
-import { reviewMaterial } from "./behavior.mjs";
+import { reviewRequest } from "./behavior.mjs";
 
 const messages = [
   {
@@ -16,17 +16,16 @@ const messages = [
   { role: "system", content: "", sections: { skills: null }, toolsRemoved: [{ name: "read" }] },
 ];
 
-test("native session preserves prompt/tool updates and stable source-line evidence", () => {
+test("native session preserves prompt/tool updates verbatim in the judge material file", () => {
   const output = { sessionJsonl: sessionJsonl(messages), files: {} };
   assert.deepEqual(sessionMessages(output), messages);
-  const material = reviewMaterial({ task: "Inspect the repository", files: {} }, output);
-  assert.deepEqual(
-    material.evidence.map((item) => item.id),
-    ["task", "session:2", "session:3", "session:4"],
+  const request = reviewRequest(
+    "Review",
+    "## context\nCheck context.",
+    { task: "Inspect the repository", files: {} },
+    output,
   );
-  assert.deepEqual(material.evidence[1].record.message.sections, messages[0].sections);
-  assert.deepEqual(material.evidence[3].record.message.toolsRemoved, messages[2].toolsRemoved);
-  assert.equal(material.evidence[3].record.message.sections.skills, null);
+  assert.equal(request.reviewFiles["session.jsonl"], output.sessionJsonl);
 });
 
 test("missing, truncated, branching and rewritten context cannot become valid evidence", () => {

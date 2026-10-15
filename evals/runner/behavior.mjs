@@ -1,5 +1,5 @@
 import { changesBetween } from "./submission.mjs";
-import { sessionEntries } from "./session.mjs";
+import { reviewDirectory, validateReviewFiles } from "./review-files.mjs";
 
 export const supportedCases = [
   "write-good-test/mixed-assertions",
@@ -10,7 +10,6 @@ export const supportedCases = [
 export const conditions = ["without-skill", "with-skill"];
 export const verdicts = ["satisfied", "violated", "not-applicable", "insufficient-evidence"];
 
-// IDs are part of the rubric's review contract, not a prose-matching grader.
 export function criterionIds(criteria) {
   const ids = [...criteria.matchAll(/^## ([a-z][a-z0-9-]+)\s*$/gm)].map((match) => match[1]);
   if (!ids.length || new Set(ids).size !== ids.length)
@@ -18,57 +17,54 @@ export function criterionIds(criteria) {
   return ids;
 }
 
-export function reviewMaterial(inputs, output) {
-  if (typeof inputs.task !== "string" || !inputs.task.trim()) throw new Error("Missing task");
-  const changes = changesBetween(inputs.files, output.files);
-  const evidence = [
-    { id: "task", text: inputs.task },
-    ...Object.entries(inputs.files).map(([path, text]) => ({ id: `initial:${path}`, text })),
-    ...changes.map(({ path, before, after }) => ({ id: `change:${path}`, before, after })),
-  ];
-  sessionEntries(output).forEach((entry, index) => {
-    if (entry.type !== "message") return;
-    const { role, content, sections, toolsAdded, toolsRemoved, toolCallId, toolName, isError } =
-      entry.message;
-    const record = {
-      type: "message",
-      message: Object.fromEntries(
-        Object.entries({
-          role,
-          content,
-          sections,
-          toolsAdded,
-          toolsRemoved,
-          toolCallId,
-          toolName,
-          isError,
-        }).filter(([, value]) => value !== undefined),
-      ),
-    };
-    evidence.push({ id: `session:${index + 1}`, record });
-  });
-  return { evidence };
-}
-
-export function reviewRequest(prompt, criteria, material) {
+export function reviewRequest(prompt, criteria, inputs, output) {
   criterionIds(criteria);
-  const systemPrompt = `${prompt}\n\n# Trusted case criteria\n\n${criteria}`;
-  const task = JSON.stringify(material);
-  return { systemPrompt, task };
+  if (typeof inputs.task !== "string" || !inputs.task.trim()) throw new Error("Missing task");
+  const reviewFiles = {
+    "task.md": inputs.task,
+    "session.jsonl": output.sessionJsonl,
+    "initial.json": JSON.stringify(inputs.files, null, 2) + "\n",
+    "changes.json": JSON.stringify(changesBetween(inputs.files, output.files), null, 2) + "\n",
+  };
+  validateReviewFiles(reviewFiles);
+  return {
+    systemPrompt: prompt,
+    task: `Review the agent's behavior using these files:\n${Object.keys(reviewFiles)
+      .map((name) => `${reviewDirectory}/${name}`)
+      .join(
+        "\n",
+      )}\nRead the materials with your tools, inspect the native session JSONL yourself, and return the required JSON verdicts.\n\n# Trusted case criteria\n\n${criteria}`,
+    reviewFiles,
+  };
 }
 
-export function parseReview(text, criteria, material) {
+export function parseReview(text, criteria, reviewFiles) {
   let review;
   try {
     review = JSON.parse(text);
   } catch {
     throw new Error("Judge did not return JSON");
   }
+  validateReviewFiles(reviewFiles);
   const ids = criterionIds(criteria);
-  const evidence = new Map(material.evidence.map((item) => [item.id, item]));
   if (!review || !Array.isArray(review.criteria) || review.criteria.length !== ids.length)
     throw new Error("Judge must return every criterion exactly once");
   const remaining = new Set(ids);
+  const validReference = (reference) => {
+    if (typeof reference !== "string") return false;
+    const match = reference.match(/^\/workspace\/materials\/([\w.-]+):(\d+)(?:-(\d+))?$/);
+    if (!match || !Object.hasOwn(reviewFiles, match[1])) return false;
+    const start = Number(match[2]);
+    const end = Number(match[3] ?? match[2]);
+    const lines = reviewFiles[match[1]].replace(/\n$/, "").split("\n").length;
+    return (
+      Number.isSafeInteger(start) &&
+      Number.isSafeInteger(end) &&
+      start >= 1 &&
+      end >= start &&
+      end <= lines
+    );
+  };
   for (const item of review.criteria) {
     if (
       !item ||
@@ -78,24 +74,14 @@ export function parseReview(text, criteria, material) {
       !item.reason.trim() ||
       !Array.isArray(item.evidence) ||
       (item.verdict !== "insufficient-evidence" && !item.evidence.length) ||
-      item.evidence.some((id) => !evidence.has(id))
+      item.evidence.some((reference) => !validReference(reference))
     )
       throw new Error("Invalid criterion, verdict, reason, or evidence reference");
     if (
       item.verdict !== "insufficient-evidence" &&
-      !item.evidence.some((id) => {
-        const source = evidence.get(id);
-        return (
-          id.startsWith("initial:") ||
-          id.startsWith("change:") ||
-          source.record?.message?.role === "toolResult" ||
-          (source.record?.message?.role === "assistant" &&
-            Array.isArray(source.record.message.content) &&
-            source.record.message.content.some((part) => part.type === "toolCall"))
-        );
-      })
+      !item.evidence.some((reference) => !reference.startsWith(`${reviewDirectory}/task.md:`))
     )
-      throw new Error("Behavior verdict requires code or tool evidence, not self-report alone");
+      throw new Error("Behavior verdict requires session or code evidence, not the task alone");
   }
   return {
     criteria: review.criteria.map(({ criterion, verdict, evidence, reason }) => ({

@@ -15,12 +15,11 @@ import { verifyActivation } from "./patch.mjs";
 import { readRegular, readTree } from "../runner/files.mjs";
 import { readAuth, redact } from "../runner/auth.mjs";
 import { parseAgentOutput, assessAgent } from "../runner/agent-result.mjs";
-import { sessionMessages } from "../runner/session.mjs";
+import { writeReviewFiles } from "../runner/review-files.mjs";
 import { runPiContainer } from "../runner/docker.mjs";
 import { checkSelection } from "../runner/judge.mjs";
 import {
   criterionIds,
-  reviewMaterial,
   reviewRequest,
   parseReview,
   reviewStatus,
@@ -92,8 +91,13 @@ async function prepare(materials, directory, signal) {
 
 async function review(materials, output, selection, auth, image, directory, signal) {
   const prompt = await readRegular(join(root, "..", "runner", "judge-prompt.md"));
-  const material = reviewMaterial({ task: materials.task, files: output.initial }, output);
-  const request = reviewRequest(prompt, materials.criteria, material);
+  const request = reviewRequest(
+    prompt,
+    materials.criteria,
+    { task: materials.task, files: output.initial },
+    output,
+  );
+  await writeReviewFiles(request.reviewFiles, join(directory, "materials"));
   await saveJson(join(directory, "review-request.json"), request);
   const execution = await runPiContainer(
     image,
@@ -104,16 +108,10 @@ async function review(materials, output, selection, auth, image, directory, sign
   await saveJson(join(directory, "judge.json"), judge);
   const assessment = assessAgent(judge, selection);
   await writeFile(join(directory, "judge-session.jsonl"), judge.sessionJsonl ?? "");
-  const messages = sessionMessages(judge).filter((message) => message.role === "assistant");
-  if (
-    !assessment.ok ||
-    judge.runtime.mode !== "review" ||
-    assessment.toolCalls !== 0 ||
-    messages.length !== 1
-  )
-    throw new Error("Judge did not finish a tool-free review");
+  if (!assessment.ok || judge.runtime.mode !== "review")
+    throw new Error(assessment.reason ?? "Judge did not complete its review");
   return {
-    behavior: parseReview(assessment.finalResponse, materials.criteria, material),
+    behavior: parseReview(assessment.finalResponse, materials.criteria, request.reviewFiles),
     requestHash: hash(JSON.stringify(request)),
     judge: assessment,
   };

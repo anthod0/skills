@@ -13,7 +13,7 @@ import { sessionMessages } from "./session.mjs";
 
 const selection = { provider: "example", model: "review-model" };
 const originalSelection = { provider: "example", model: "agent-model" };
-function packet(selected, files, text) {
+function packet(selected, files, text, history = []) {
   return {
     runtime: {
       uid: 1000,
@@ -27,6 +27,7 @@ function packet(selected, files, text) {
     execution: { code: 0 },
     files,
     sessionJsonl: sessionJsonl([
+      ...history,
       {
         role: "assistant",
         ...selected,
@@ -84,13 +85,39 @@ async function withArchive(run) {
 }
 
 function successfulJudge(_image, payload) {
-  const criteria = criterionIds(payload.systemPrompt).map((criterion) => ({
+  const criteria = criterionIds(payload.task).map((criterion) => ({
     criterion,
     verdict: "satisfied",
-    evidence: ["change:tests/a.ts"],
+    evidence: ["/workspace/materials/changes.json:1"],
     reason: "Synthetic judge result, not a semantic accuracy test",
   }));
-  return { code: 0, stdout: JSON.stringify(packet(selection, {}, JSON.stringify({ criteria }))) };
+  return {
+    code: 0,
+    stdout: JSON.stringify(
+      packet(selection, {}, JSON.stringify({ criteria }), [
+        {
+          role: "assistant",
+          ...selection,
+          stopReason: "toolUse",
+          content: [
+            {
+              type: "toolCall",
+              id: "inspect",
+              name: "read",
+              arguments: { path: "/workspace/materials/session.jsonl" },
+            },
+          ],
+        },
+        {
+          role: "toolResult",
+          toolCallId: "inspect",
+          toolName: "read",
+          isError: false,
+          content: [{ type: "text", text: "Synthetic material read" }],
+        },
+      ]),
+    ),
+  };
 }
 
 test("re-review uses archived inputs, grades scope violations too, and never overwrites prior results", async () => {
@@ -103,7 +130,8 @@ test("re-review uses archived inputs, grades scope violations too, and never ove
       assert.deepEqual(payload.skills, {});
       assert.equal(payload.task.includes("without-skill"), false);
       assert.equal(payload.task.includes("with-skill"), false);
-      assert.equal(payload.systemPrompt.includes("remove-low-value"), true);
+      assert.equal(payload.systemPrompt.includes("remove-low-value"), false);
+      assert.equal(payload.task.includes("remove-low-value"), true);
       return successfulJudge(image, payload);
     };
     const first = await reviewRun(root, selection, { ...options, run });
@@ -169,11 +197,13 @@ test("re-review sends native session evidence larger than 512 KiB to the judge i
       ...options,
       run: async (image, payload) => {
         calls++;
-        const material = JSON.parse(payload.task);
         assert.equal(
-          material.evidence.find((item) => item.id === "session:2").record.message.content[0].text,
+          JSON.parse(payload.reviewFiles["session.jsonl"].trimEnd().split("\n")[1]).message
+            .content[0].text,
           text,
         );
+        assert.ok(payload.task.includes("/workspace/materials/session.jsonl"));
+        assert.ok(!payload.task.includes(text));
         return successfulJudge(image, payload);
       },
     });
@@ -182,7 +212,7 @@ test("re-review sends native session evidence larger than 512 KiB to the judge i
   });
 });
 
-test("judge protocol errors, tool attempts and transport failures remain review errors", async () => {
+test("judge protocol errors, incomplete tool histories and transport failures remain review errors", async () => {
   for (const problem of ["json", "tool", "timeout"]) {
     await withArchive(async (root, options) => {
       const review = await reviewRun(root, selection, {
@@ -193,9 +223,9 @@ test("judge protocol errors, tool attempts and transport failures remain review 
           const output = JSON.parse(execution.stdout);
           editSession(output, (entries) => {
             if (problem === "json")
-              entries[1].message.content[0].text = "not JSON synthetic-review-key";
+              entries.at(-1).message.content[0].text = "not JSON synthetic-review-key";
             else
-              entries[1].message.content.push({
+              entries.at(-1).message.content.push({
                 type: "toolCall",
                 id: "attempt",
                 name: "bash",
@@ -253,7 +283,7 @@ test("judge cleanup failure preserves the completed export and stops subsequent 
     const archived = JSON.parse(
       await readRegular(join(review.directory, "without-skill/judge.json")),
     );
-    assert.equal(JSON.parse(sessionMessages(archived)[0].content[0].text).criteria.length, 4);
+    assert.equal(JSON.parse(sessionMessages(archived).at(-1).content[0].text).criteria.length, 4);
     assert.equal(
       await readRegular(join(review.directory, "without-skill/session.jsonl")),
       archived.sessionJsonl,
