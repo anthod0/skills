@@ -34,3 +34,11 @@ Personal skills for AI agents.
 | --------------------------------------------------- | ----------------------------------------------------------- |
 | [`generate-challenge`](skills/generate-challenge/SKILL.md) | Generate ideas for evaluation-focused social media content. |
 | [`x-post-writer`](skills/x-post-writer/SKILL.md)           | Remove signs of AI writing.                                 |
+
+
+## Evaluations
+
+Compare agent behavior with and without a target skill. These evaluations assess agent behavior, not benchmark scores or task correctness.
+
+- [Fixture evaluations](evals/README.md): use repository-maintained tasks and fixtures to target specific skill behaviors.
+- [External-task evaluations](evals/external/README.md): use pinned tasks and repository environments from external benchmarks to assess skill behavior on real-world work.
