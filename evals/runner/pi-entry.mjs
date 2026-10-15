@@ -5,6 +5,7 @@ import { readRegular, readTree, writeTree } from "./files.mjs";
 import { selectAuth, redact } from "./auth.mjs";
 import { serializeAgentOutput } from "./agent-result.mjs";
 import { prepareWorkspace, generatedPaths } from "./workspace.mjs";
+import { sessionPath, readSession } from "./session.mjs";
 
 export function piArguments({ provider, model, thinking, skills, systemPrompt }) {
   const skillArgs = Object.keys(skills)
@@ -17,9 +18,10 @@ export function piArguments({ provider, model, thinking, skills, systemPrompt })
     throw new Error("Review requires a system prompt and no skills");
   return [
     "--mode",
-    "json",
+    "text",
     "--print",
-    "--no-session",
+    "--session",
+    sessionPath,
     "--offline",
     "--no-approve",
     "--no-extensions",
@@ -105,40 +107,22 @@ async function main() {
   };
   const child = spawnSync("pi", args, {
     input: task,
-    stdio: ["pipe", "pipe", "pipe"],
+    stdio: ["pipe", "ignore", "pipe"],
     encoding: "utf8",
     maxBuffer: 4 * 1024 * 1024,
     timeout: (budgetSeconds - 10) * 1000,
     killSignal: "SIGKILL",
   });
-  // Capture authoritative messages and every tool start/end; streaming deltas and
-  // agent_end.messages duplicate this content and can balloon the export.
-  const events = [];
-  let eventError;
-  for (const line of (child.stdout ?? "").split("\n").filter(Boolean)) {
-    try {
-      const event = JSON.parse(line);
-      if (!event || typeof event.type !== "string") throw new Error("Invalid event");
-      if (/compaction/.test(event.type)) eventError = "Compacted evidence is not supported";
-      if (event.type === "agent_end") events.push({ type: "agent_end" });
-      else if (
-        [
-          "session",
-          "agent_start",
-          "message_end",
-          "tool_execution_start",
-          "tool_execution_end",
-        ].includes(event.type)
-      )
-        events.push(event);
-    } catch {
-      eventError = "Malformed or truncated Pi event stream";
-    }
+  let sessionJsonl, sessionError;
+  try {
+    sessionJsonl = await readSession();
+  } catch {
+    sessionError = "Native session export failed";
   }
   const execution = {
     code: child.status,
     signal: child.signal,
-    problem: child.error?.code ?? eventError,
+    problem: child.error?.code ?? sessionError,
     stderr: child.stderr ?? "",
   };
   let currentAuth;
@@ -146,7 +130,7 @@ async function main() {
     currentAuth = selectAuth(await readRegular("/run/pi-agent/auth.json"), provider);
   } catch {}
   if (!currentAuth) {
-    console.log(serializeAgentOutput({ runtime, events, execution }, auth));
+    console.log(serializeAgentOutput({ runtime, sessionJsonl, execution }, auth));
     return;
   }
   let exported;
@@ -163,7 +147,7 @@ async function main() {
   }
   console.log(
     serializeAgentOutput(
-      { runtime, events, files: exported, artifactError, execution },
+      { runtime, sessionJsonl, files: exported, artifactError, execution },
       auth,
       currentAuth,
     ),

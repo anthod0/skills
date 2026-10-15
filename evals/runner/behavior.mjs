@@ -1,4 +1,5 @@
 import { changesBetween } from "./submission.mjs";
+import { sessionEntries } from "./session.mjs";
 
 export const supportedCases = [
   "write-good-test/mixed-assertions",
@@ -8,7 +9,6 @@ export const supportedCases = [
 ];
 export const conditions = ["without-skill", "with-skill"];
 export const verdicts = ["satisfied", "violated", "not-applicable", "insufficient-evidence"];
-const inputLimit = 512 * 1024;
 
 // IDs are part of the rubric's review contract, not a prose-matching grader.
 export function criterionIds(criteria) {
@@ -26,17 +26,26 @@ export function reviewMaterial(inputs, output) {
     ...Object.entries(inputs.files).map(([path, text]) => ({ id: `initial:${path}`, text })),
     ...changes.map(({ path, before, after }) => ({ id: `change:${path}`, before, after })),
   ];
-  output.events.forEach((event, index) => {
-    // Session IDs, provider identity, usage and condition metadata do not help judge behavior.
-    if (event.type === "session") return;
-    const record =
-      event.type === "message_end"
-        ? {
-            type: event.type,
-            message: { role: event.message?.role, content: event.message?.content },
-          }
-        : event;
-    evidence.push({ id: `event:${index + 1}`, record });
+  sessionEntries(output).forEach((entry, index) => {
+    if (entry.type !== "message") return;
+    const { role, content, sections, toolsAdded, toolsRemoved, toolCallId, toolName, isError } =
+      entry.message;
+    const record = {
+      type: "message",
+      message: Object.fromEntries(
+        Object.entries({
+          role,
+          content,
+          sections,
+          toolsAdded,
+          toolsRemoved,
+          toolCallId,
+          toolName,
+          isError,
+        }).filter(([, value]) => value !== undefined),
+      ),
+    };
+    evidence.push({ id: `session:${index + 1}`, record });
   });
   return { evidence };
 }
@@ -45,8 +54,6 @@ export function reviewRequest(prompt, criteria, material) {
   criterionIds(criteria);
   const systemPrompt = `${prompt}\n\n# Trusted case criteria\n\n${criteria}`;
   const task = JSON.stringify(material);
-  if (Buffer.byteLength(systemPrompt) + Buffer.byteLength(task) > inputLimit)
-    throw new Error("Review input exceeds 512 KiB; evidence was not truncated");
   return { systemPrompt, task };
 }
 
@@ -81,7 +88,10 @@ export function parseReview(text, criteria, material) {
         return (
           id.startsWith("initial:") ||
           id.startsWith("change:") ||
-          ["tool_execution_start", "tool_execution_end"].includes(source.record?.type)
+          source.record?.message?.role === "toolResult" ||
+          (source.record?.message?.role === "assistant" &&
+            Array.isArray(source.record.message.content) &&
+            source.record.message.content.some((part) => part.type === "toolCall"))
         );
       })
     )

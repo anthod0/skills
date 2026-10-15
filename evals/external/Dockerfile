@@ -11,7 +11,7 @@ RUN git clone https://github.com/SWE-bench/SWE-bench /opt/swe \
     && /opt/harness-python/bin/pip install /opt/swe /opt/swt \
     && /opt/harness-python/bin/pip freeze > /opt/harness-requirements.txt
 COPY runner/ /harness/
-COPY external/adapter.py /harness/adapter.py
+COPY external/environment.py /harness/environment.py
 ENV PI_CODING_AGENT_DIR=/run/pi-agent PI_OFFLINE=1 PI_TELEMETRY=0
 USER node
 WORKDIR /workspace

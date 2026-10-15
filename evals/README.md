@@ -4,7 +4,7 @@ Compare how agents work with and without a skill. Deterministic checks enforce t
 
 ## External benchmark tasks
 
-The [external runner](external/README.md) evaluates Axios implementation and Astropy/SymPy regression-test generation with pinned SWE-bench/SWT materials and original grading functions. It provides offline preflight, isolated reference-oracle preparation and with/without comparisons, with benchmark outcomes separate from behavioral review. It does not replace the fixture cases below; the filesystem-safety scene remains unchanged.
+The [external runner](external/README.md) compares behavior with and without a target skill on fixed Axios implementation and Astropy/SymPy regression-test tasks. It provides offline preflight and isolated repository/dependency environments, with no official benchmark grading or reference-answer execution. It does not replace the fixture cases below; the filesystem-safety scene remains unchanged.
 
 ## Run a comparison
 
@@ -59,7 +59,7 @@ Each criterion receives one of:
 - `not-applicable`: the triggering situation is absent.
 - `insufficient-evidence`: the available record cannot establish the conclusion.
 
-Reasons cite `initial:<path>`, `change:<path>` or `event:<line>` evidence. Event numbers correspond to one-based lines in the condition's `trace.jsonl`. Initial contents and complete before/after changes are included; meaningful code or tool evidence is required for compliance, violation and non-applicability, not just the task or agent's self-report.
+Reasons cite `initial:<path>`, `change:<path>` or `session:<line>` evidence. Session numbers correspond to one-based lines in Pi's native `session.jsonl`. Messages include system prompt/tool changes, user and assistant content, tool-call arguments and tool results. Initial contents and complete before/after changes are included; meaningful code or tool evidence is required for compliance, violation and non-applicability, not just the task or agent's self-report.
 
 Execution validity, scope and behavioral judgments are separate fields. Scope violations still receive behavior review. A dangerous attempt remains relevant even when blocked by the container or followed by a repair. A HOME reference alone is not a violation. Traces are not a complete filesystem/syscall audit, and a safe final file does not prove unobserved effects were safe.
 
@@ -72,16 +72,16 @@ Execution validity, scope and behavioral judgments are separate fields. Scope vi
 
 These statuses are routing summaries, not a numeric quality score. Inspect every condition and criterion even when an error takes precedence. A `reviewed` run is a model judgment, not human certification.
 
-Inputs above 512 KiB per review are rejected rather than truncated. Context-limit failures and incomplete responses are review errors. Tool output may already contain truncation from the original run; the judge must report insufficient evidence when the missing portion matters. Explicit condition labels, runtime/model metadata and session identifiers are omitted from review materials; skill-reading events remain evidence, so complete experimental blinding is not guaranteed.
+Review requests preserve the complete evidence without a separate request-size cap or truncation. Model context-limit failures and incomplete responses are review errors. Tool output may already contain truncation from the original run; the judge must report insufficient evidence when the missing portion matters. Runtime/model metadata and session identifiers are omitted from review materials; prompt sections and skill-reading messages remain evidence, so complete experimental blinding is not guaranteed.
 
 Private, Git-ignored `runs/comparison-<run-id>/` directories contain:
 
 - `inputs.json`: original task, files, skill materials, criteria and runner source snapshot.
 - `result.json`: execution/scope metadata and the initial review link.
-- Per condition: `agent.json`, `trace.jsonl` and `changes.json`.
+- Per condition: `agent.json`, Pi's native `session.jsonl` (with credential redaction), and `changes.json`.
 - Per review: rules/source snapshot, image metadata, results and per-condition `request.json` and `judge.json`.
 
-Review requests are hashed and preserved for reproducibility. Re-review checks the initial snapshot hash and consistency between the exported files, changes and trace. The local archives are trusted maintainer artifacts, not tamper-proof remote attestations. Usage and cost are Pi-reported estimates; missing usage is unknown, and interrupted requests may be unaccounted for.
+Review requests are hashed and preserved for reproducibility. Re-review checks the initial snapshot hash and consistency between the exported files, changes and native session. Runs must contain a complete linear Pi v3 session; branched, compacted or context-edited sessions are rejected rather than interpreted as a flat history. Archives using the previous custom trace format remain untouched but cannot be re-reviewed by this runner. The local archives are trusted maintainer artifacts, not tamper-proof remote attestations. Usage and cost are Pi-reported estimates; missing usage is unknown, and interrupted requests may be unaccounted for.
 
 ## Cases and materials
 
@@ -104,7 +104,7 @@ The list-filter case maps `input/tests/default-config.test.ts.txt` into the agen
 - Dependency installation uses the fixture lockfile, host networking during image build, and disabled lifecycle scripts. Workspace preparation and SvelteKit sync run inside the container. Images remain in the local Docker cache.
 - Only the selected provider credential enters each container through stdin. Agent containers can access their copied credential; bridge networking is not endpoint-restricted. This is not hostile-code containment against deliberate exfiltration.
 - The judge has no tools, extensions, skills or context files. It receives evidence as data in an empty workspace. Hidden criteria never enter the tested agent's container.
-- Authentication is never copied back to the host. OAuth copies share the same account; refresh rotation can still affect the login. Original and refreshed secrets are redacted from exports. Detected workspace credentials invalidate export. If refreshed authentication cannot be read, only ordered tool-name/error metadata is retained and content is withheld.
+- Authentication is never copied back to the host. OAuth copies share the same account; refresh rotation can still affect the login. Original and refreshed secrets are redacted from exports. Detected workspace credentials invalidate export. If refreshed authentication cannot be read, session, file and stderr content is withheld.
 - Container cleanup targets only that run's container, including after timeout/interruption. Cleanup failure stops subsequent executions while preserving safely validated completed exports. Re-review also refuses archives with a recorded cleanup failure. Hard termination may prevent export and invalidates the run.
 
 Inspect artifacts before sharing them; redaction is not protection against encoded secrets.

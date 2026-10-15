@@ -4,6 +4,7 @@ import { readRegular, writeTree } from "../runner/files.mjs";
 import { selectAuth, redact } from "../runner/auth.mjs";
 import { serializeAgentOutput } from "../runner/agent-result.mjs";
 import { piArguments } from "../runner/pi-entry.mjs";
+import { readSession } from "../runner/session.mjs";
 import { git as runGit, exportPatch, agentTask } from "./patch.mjs";
 
 const git = (args) => runGit(args, "/testbed");
@@ -68,32 +69,18 @@ async function main() {
   };
   const child = spawnSync("pi", piArguments(payload), {
     input: agentTask(task, payload.targetSkill, skills),
+    stdio: ["pipe", "ignore", "pipe"],
     encoding: "utf8",
     timeout: 590_000,
     maxBuffer: 4 * 1024 * 1024,
     killSignal: "SIGKILL",
   });
-  const events = [];
+  let sessionJsonl;
   let problem = child.error?.code;
-  for (const line of (child.stdout ?? "").split("\n").filter(Boolean)) {
-    try {
-      const event = JSON.parse(line);
-      if (!event || typeof event.type !== "string") throw new Error("Invalid event");
-      if (/compaction/.test(event.type)) problem = "Compacted evidence";
-      if (event.type === "agent_end") events.push({ type: "agent_end" });
-      else if (
-        [
-          "session",
-          "agent_start",
-          "message_end",
-          "tool_execution_start",
-          "tool_execution_end",
-        ].includes(event.type)
-      )
-        events.push(event);
-    } catch {
-      problem = "Malformed or truncated Pi event stream";
-    }
+  try {
+    sessionJsonl = await readSession();
+  } catch {
+    problem ??= "Native session export failed";
   }
   const execution = {
     code: child.status,
@@ -121,7 +108,7 @@ async function main() {
   }
   console.log(
     serializeAgentOutput(
-      { runtime, events, execution, files, initial, patch, artifactError },
+      { runtime, sessionJsonl, execution, files, initial, patch, artifactError },
       auth,
       currentAuth,
     ),

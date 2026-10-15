@@ -5,6 +5,7 @@ import { piArguments } from "./pi-entry.mjs";
 import { selectAuth, redact } from "./auth.mjs";
 import { assessPiSmoke } from "./pi-smoke-result.mjs";
 import { assessAgent, parseAgentOutput, serializeAgentOutput } from "./agent-result.mjs";
+import { sessionJsonl, editSession } from "./test-session.mjs";
 
 const selection = { provider: "example", model: "example-model" };
 const credential = {
@@ -59,36 +60,39 @@ function packet() {
     },
     execution: { code: 0 },
     files: { "probe.txt": "AFTER\n" },
-    events: [
+    sessionJsonl: sessionJsonl([
       ...["read", "write", "edit", "bash"].flatMap((toolName) => [
-        { type: "tool_execution_start", toolName, toolCallId: toolName, args: {} },
         {
-          type: "tool_execution_end",
-          toolName,
-          toolCallId: toolName,
-          isError: false,
-          result: { content: [] },
-        },
-      ]),
-      {
-        type: "message_end",
-        message: {
           role: "assistant",
           ...selection,
-          stopReason: "stop",
-          content: [{ type: "text", text: "PI_SMOKE_OK" }],
+          stopReason: "toolUse",
+          content: [{ type: "toolCall", id: toolName, name: toolName, arguments: {} }],
           usage: {
-            input: 10,
-            output: 2,
-            cacheRead: 3,
+            input: 0,
+            output: 0,
+            cacheRead: 0,
             cacheWrite: 0,
-            totalTokens: 15,
-            cost: { total: 0.01 },
+            totalTokens: 0,
+            cost: { total: 0 },
           },
         },
+        { role: "toolResult", toolName, toolCallId: toolName, isError: false, content: [] },
+      ]),
+      {
+        role: "assistant",
+        ...selection,
+        stopReason: "stop",
+        content: [{ type: "text", text: "PI_SMOKE_OK" }],
+        usage: {
+          input: 10,
+          output: 2,
+          cacheRead: 3,
+          cacheWrite: 0,
+          totalTokens: 15,
+          cost: { total: 0.01 },
+        },
       },
-      { type: "agent_end" },
-    ],
+    ]),
   };
 }
 const execution = (output) => ({ code: 0, stdout: JSON.stringify(output), stderr: "not archived" });
@@ -108,37 +112,59 @@ test("requires completion from expected model, complete tool traces, and verifie
       output.runtime.cwd = "/host";
     },
     (output) => {
-      output.events[1].isError = true;
+      editSession(output, (entries) => {
+        entries[2].message.isError = true;
+      });
     },
     (output) => {
-      output.events.splice(1, 1);
+      editSession(output, (entries) => {
+        entries.splice(2, 1);
+      });
     },
     (output) => {
-      output.events[1].toolCallId = "unmatched";
+      editSession(output, (entries) => {
+        entries[2].message.toolCallId = "unmatched";
+      });
     },
     (output) => {
-      output.events[1].isError = "false";
+      editSession(output, (entries) => {
+        entries[2].message.isError = "false";
+      });
     },
     (output) => {
-      [output.events[0], output.events[1]] = [output.events[1], output.events[0]];
+      editSession(output, (entries) => {
+        [entries[1].message, entries[2].message] = [entries[2].message, entries[1].message];
+      });
     },
     (output) => {
-      delete output.events[0].args;
+      editSession(output, (entries) => {
+        delete entries[1].message.content[0].arguments;
+      });
     },
     (output) => {
-      delete output.events[1].result;
+      editSession(output, (entries) => {
+        delete entries[2].message.content;
+      });
     },
     (output) => {
-      output.events[8].message.model = "other-model";
+      editSession(output, (entries) => {
+        entries.at(-1).message.model = "other-model";
+      });
     },
     (output) => {
-      output.events[8].message.stopReason = "error";
+      editSession(output, (entries) => {
+        entries.at(-1).message.stopReason = "error";
+      });
     },
     (output) => {
-      output.events[8].message.content = {};
+      editSession(output, (entries) => {
+        entries.at(-1).message.content = {};
+      });
     },
     (output) => {
-      output.events.pop();
+      editSession(output, (entries) => {
+        entries.pop();
+      });
     },
     (output) => {
       output.files["probe.txt"] = "BEFORE\n";
@@ -171,24 +197,17 @@ test("requires completion from expected model, complete tool traces, and verifie
   assert.throws(() => parseAgentOutput(execution(output)), /Unsafe/);
 });
 
-test("unavailable post-run authentication preserves operation evidence without unknown credential content", () => {
+test("unavailable post-run authentication withholds session and file content", () => {
   const output = packet();
   const unknownSecret = "unknown-refreshed-credential";
   output.execution.stderr = unknownSecret;
   output.files["leaked.txt"] = unknownSecret;
-  output.events[0].toolCallId = unknownSecret;
-  output.events[0].args = { command: `rm /run/pi-agent/auth.json; echo ${unknownSecret}` };
-  output.events[1].result = { text: unknownSecret };
-  output.events[2].toolName = unknownSecret;
-  output.events[8].message.content = [{ type: "text", text: unknownSecret }];
+  output.sessionJsonl = sessionJsonl([{ role: "user", content: unknownSecret }]);
   const serialized = serializeAgentOutput(output, { example: credential }, undefined);
   assert.equal(serialized.includes(unknownSecret), false);
   const archived = parseAgentOutput({ code: 0, stdout: serialized });
   assert.equal(archived.files, null);
-  assert.equal(archived.traceContent, "withheld");
-  assert.equal(archived.events.length, 8);
-  assert.equal(archived.events[2].toolName, "unknown");
-  assert.equal(archived.events.filter((event) => event.type === "tool_execution_start").length, 4);
+  assert.equal(archived.sessionJsonl, null);
   assert.equal(assessAgent(archived, selection).ok, false);
 });
 
@@ -206,7 +225,7 @@ test("review invocations disable all tools and discovered resources; skills cann
     "--no-extensions",
     "--no-context-files",
     "--no-approve",
-    "--no-session",
+    "--session",
   ])
     assert.ok(args.includes(flag));
   assert.equal(args[args.indexOf("--system-prompt") + 1], request.systemPrompt);

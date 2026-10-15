@@ -138,8 +138,7 @@ ${isSwt ? "RUN /opt/miniconda3/bin/conda clean --all --yes && mv /opt/miniconda3
 COPY --from=tools /usr/local/lib/node_modules /usr/local/lib/node_modules
 RUN ln -sf /usr/local/lib/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js /usr/local/bin/pi
 COPY --from=tools /harness /harness/runner
-COPY --from=tools /opt/swt/src/auxillary_src/trace.py /harness/trace.py
-COPY agent-entry.mjs oracle-entry.mjs patch.mjs /harness/external/
+COPY agent-entry.mjs patch.mjs /harness/external/
 ENV PI_CODING_AGENT_DIR=/run/pi-agent PI_OFFLINE=1 PI_TELEMETRY=0
 USER 1000:1000
 WORKDIR /testbed

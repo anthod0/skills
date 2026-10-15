@@ -1,4 +1,5 @@
 import { parseAgentOutput, assessAgent } from "./agent-result.mjs";
+import { sessionMessages } from "./session.mjs";
 
 export function assessPiSmoke(execution, selection) {
   let output;
@@ -11,7 +12,7 @@ export function assessPiSmoke(execution, selection) {
   if (!check.ok) return check;
   if (check.finalResponse !== "PI_SMOKE_OK")
     return { ok: false, reason: "Missing final smoke acknowledgement" };
-  const tools = output.events.filter((event) => event.type === "tool_execution_end");
+  const tools = sessionMessages(output).filter((message) => message.role === "toolResult");
   if (
     tools.some((event) => event.isError !== false) ||
     !["read", "write", "edit", "bash"].every((name) =>

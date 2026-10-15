@@ -6,6 +6,7 @@ import { readRegular, readTree } from "./files.mjs";
 import { readAuth, redact } from "./auth.mjs";
 import { buildImage, runPiContainer } from "./docker.mjs";
 import { parseAgentOutput, assessAgent } from "./agent-result.mjs";
+import { sessionMessages } from "./session.mjs";
 import { changesBetween, checkScope } from "./submission.mjs";
 import {
   supportedCases,
@@ -94,12 +95,8 @@ export async function reviewRun(
         });
         result.agent = assessAgent(output, original);
         if (!result.agent.ok) throw new Error(result.agent.reason);
-        const trace = (await readArtifact(join(root, "trace.jsonl")))
-          .trim()
-          .split("\n")
-          .map((line) => JSON.parse(line));
-        if (JSON.stringify(trace) !== JSON.stringify(output.events))
-          throw new Error("Trace does not match agent export");
+        const session = await readArtifact(join(root, "session.jsonl"));
+        if (session !== output.sessionJsonl) throw new Error("Session does not match agent export");
         const changes = changesBetween(inputs.files, output.files);
         if (
           JSON.stringify(JSON.parse(await readArtifact(join(root, "changes.json")))) !==
@@ -152,17 +149,16 @@ export async function reviewRun(
           stdout: redact(execution.stdout, auth),
         });
         await writeFile(join(destination, "judge.json"), JSON.stringify(output, null, 2) + "\n");
+        await writeFile(join(destination, "session.jsonl"), output.sessionJsonl ?? "");
         if (execution.cleanupFailed) throw new Error("Judge container cleanup failed");
         result.judge = assessAgent(output, selection);
-        const messages = output.events.filter(
-          (event) => event.type === "message_end" && event.message?.role === "assistant",
-        );
+        const messages = sessionMessages(output).filter((message) => message.role === "assistant");
         if (
           !result.judge.ok ||
           output.runtime.mode !== "review" ||
           messages.length !== 1 ||
           result.judge.toolCalls !== 0 ||
-          messages[0].message.content.some((part) => part.type === "toolCall")
+          messages[0].content.some((part) => part.type === "toolCall")
         )
           throw new Error("Judge must finish one response without tools or compaction");
         result.behavior = parseReview(result.judge.finalResponse, criteria, material);

@@ -7,8 +7,8 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { caseIds, loadCase, conditionSkills, validateSubmission } from "./case.mjs";
 import { runIsolated, decodeExecution, benchmarkDockerfile, resolveImage } from "./docker.mjs";
-import { evaluateOracle } from "./evaluate.mjs";
 import { assessAgent } from "../runner/agent-result.mjs";
+import { sessionJsonl } from "../runner/test-session.mjs";
 import { git, exportPatch, agentTask, verifyActivation } from "./patch.mjs";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
@@ -42,6 +42,49 @@ test("all selected cases pass offline preflight and reject unrelated/unsafe IDs"
     await assert.rejects(loadCase(root, id), /Unsupported/);
 });
 
+test("SWT environment helper produces the three ordered repository/dependency build contexts", () => {
+  const command = spawnSync(
+    "python3",
+    [
+      "-c",
+      `
+import json, runpy, sys, types
+package = types.ModuleType("src")
+dataset = types.ModuleType("src.dataset")
+execution = types.ModuleType("src.exec_spec")
+def convert(row):
+    assert row["instance_id"] == "example"
+    row["converted"] = True
+    return row
+def make_spec(row):
+    assert row["converted"]
+    return types.SimpleNamespace(
+        base_image_key="base", base_dockerfile="FROM base",
+        env_image_key="env", env_dockerfile="FROM env", env_script="install dependencies",
+        instance_image_key="repo", instance_dockerfile="FROM repo", repo_script="checkout repository",
+    )
+dataset.swe_to_swt_instance = convert
+execution.make_exec_spec = make_spec
+sys.modules.update({"src": package, "src.dataset": dataset, "src.exec_spec": execution})
+runpy.run_path(sys.argv[1], run_name="__main__")
+`,
+      join(root, "environment.py"),
+    ],
+    {
+      input: JSON.stringify({ instance: { instance_id: "example" } }),
+      encoding: "utf8",
+    },
+  );
+  assert.equal(command.status, 0, command.stderr);
+  assert.deepEqual(JSON.parse(command.stdout), {
+    builds: [
+      { tag: "base", files: { Dockerfile: "FROM base" } },
+      { tag: "env", files: { Dockerfile: "FROM env", "setup_env.sh": "install dependencies" } },
+      { tag: "repo", files: { Dockerfile: "FROM repo", "setup_repo.sh": "checkout repository" } },
+    ],
+  });
+});
+
 test("a modified instance snapshot cannot silently change the fixed task", async () => {
   await temporary(async (testRoot) => {
     const id = caseIds[0];
@@ -69,7 +112,7 @@ test("single-skill comparisons keep dependency materials identical", async () =>
   }
 });
 
-test("SWT cannot score a production repair or invalid patch as successful test generation", () => {
+test("test-generation scope rejects production edits and invalid patch evidence", () => {
   const output = {
     patch: "diff --git a/sympy/core/tests/test_symbol.py b/sympy/core/tests/test_symbol.py\n",
     initial: {},
@@ -164,39 +207,6 @@ test("benchmark overlay removes future history and pins both image inputs", () =
   );
 });
 
-test("SWT runs all six official stages and delegates grading without credentials", async () => {
-  await temporary(async (testRoot) => {
-    const materials = await loadCase(root, caseIds[1]);
-    const stages = ["pred_pre", "pred_post", "gold_pre", "gold_post", "base_pre", "base_post"].map(
-      (name) => ({ name, script: `run-${name}` }),
-    );
-    const calls = [];
-    const official = { resolved: true, added_f2p: 1, coverage_delta_pred: 0.5 };
-    const run = async (runtimeImage, command, payload) => {
-      calls.push({ command, payload });
-      let output;
-      if (payload.action === "plan") output = { stages };
-      else if (payload.action === "grade") output = { [materials.instance.instance_id]: official };
-      else output = { code: 0, applied: true, log: payload.script };
-      return { code: 0, stdout: JSON.stringify(output), stderr: "" };
-    };
-    const result = await evaluateOracle(materials, "test patch", {
-      control: image,
-      image,
-      directory: join(testRoot, "oracle"),
-      run,
-    });
-    assert.deepEqual(result, official);
-    assert.equal(calls.length, 8);
-    assert.deepEqual(
-      calls.at(-1).payload.logs,
-      stages.map((stage) => stage.script),
-    );
-    assert.ok(calls.every(({ payload }) => !Object.hasOwn(payload, "auth")));
-    assert.ok(calls.slice(1, -1).every(({ payload }) => !Object.hasOwn(payload, "patch")));
-  });
-});
-
 test("rename exports preserve production deletions, even after the agent commits", async () => {
   await temporary(async (testRoot) => {
     await mkdir(join(testRoot, "sympy/core/tests"), { recursive: true });
@@ -232,19 +242,15 @@ test("runtime validation requires the real benchmark cwd without weakening fixtu
       nodeVersion: "v22.0.0",
     },
     execution: { code: 0 },
-    events: [
+    sessionJsonl: sessionJsonl([
       {
-        type: "message_end",
-        message: {
-          role: "assistant",
-          provider: "openai",
-          model: "test",
-          stopReason: "stop",
-          content: [{ type: "text", text: "Done" }],
-        },
+        role: "assistant",
+        provider: "openai",
+        model: "test",
+        stopReason: "stop",
+        content: [{ type: "text", text: "Done" }],
       },
-      { type: "agent_end" },
-    ],
+    ]),
   };
   assert.equal(assessAgent(output, { provider: "openai", model: "test" }).ok, false);
   assert.equal(
@@ -258,50 +264,26 @@ test("target skills use explicit Pi expansion and must be observed in user conte
   assert.equal(agentTask("fix the issue", "implement", skills), "/skill:implement fix the issue");
   assert.equal(agentTask("fix the issue", undefined, {}), "fix the issue");
   assert.throws(() => agentTask("task", "implement", {}), /not supplied/);
-  assert.throws(() => verifyActivation({ events: [] }, "implement"), /not observed/);
+  assert.throws(
+    () => verifyActivation({ sessionJsonl: sessionJsonl([]) }, "implement"),
+    /not observed/,
+  );
   assert.doesNotThrow(() =>
     verifyActivation(
       {
-        events: [
+        sessionJsonl: sessionJsonl([
           {
-            type: "message_end",
-            message: {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: '<skill name="implement" location="/run/pi-agent/skills/implement/SKILL.md">\\nloaded instructions',
-                },
-              ],
-            },
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: '<skill name="implement" location="/run/pi-agent/skills/implement/SKILL.md">\\nloaded instructions',
+              },
+            ],
           },
-        ],
+        ]),
       },
       "implement",
     ),
   );
-});
-
-test("oracle timeout cannot become a benchmark pass", async () => {
-  await temporary(async (testRoot) => {
-    const materials = await loadCase(root, caseIds[0]);
-    const run = async (_image, _command, payload) => ({
-      code: 0,
-      stderr: "",
-      stdout: JSON.stringify(
-        payload.action === "plan"
-          ? { stages: [{ name: "tests", script: "tests" }] }
-          : { code: null, problem: "ETIMEDOUT", log: "partial test output" },
-      ),
-    });
-    await assert.rejects(
-      evaluateOracle(materials, "patch", {
-        control: image,
-        image,
-        directory: join(testRoot, "oracle"),
-        run,
-      }),
-      /timed out/,
-    );
-  });
 });

@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { readRegular, checkFiles, checkPath } from "../runner/files.mjs";
+import { sessionMessages } from "../runner/session.mjs";
 
 export function git(args, cwd = "/workspace") {
   const result = spawnSync("git", args, {
@@ -57,11 +58,12 @@ export function agentTask(task, targetSkill, skills) {
 export function verifyActivation(output, targetSkill) {
   if (!targetSkill) return;
   const marker = `<skill name="${targetSkill}" location="/run/pi-agent/skills/${targetSkill}/SKILL.md">`;
-  const activated = output.events.some(
-    (event) =>
-      event.type === "message_end" &&
-      event.message?.role === "user" &&
-      event.message.content?.some((part) => part.type === "text" && part.text.startsWith(marker)),
+  const activated = sessionMessages(output).some(
+    (message) =>
+      message.role === "user" &&
+      (typeof message.content === "string"
+        ? message.content.startsWith(marker)
+        : message.content?.some((part) => part.type === "text" && part.text.startsWith(marker))),
   );
   if (!activated) throw new Error("Target skill expansion was not observed in the agent context");
 }

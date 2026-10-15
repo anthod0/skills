@@ -30,21 +30,13 @@ export async function loadCase(root, id) {
     manifest.classification !== "B"
   )
     throw new Error("Invalid external case snapshot");
-  for (const field of ["problem_statement", "patch", "test_patch"]) {
+  for (const field of ["problem_statement"]) {
     if (typeof instance[field] !== "string" || !instance[field].trim())
       throw new Error(`Missing ${field}`);
   }
   if (manifest.benchmark === "swe") {
     if (!/^swebench\/[\w.-]+@sha256:[a-f0-9]{64}$/.test(manifest.environment_image ?? ""))
       throw new Error("Missing immutable SWE environment image");
-    if (!instance.eval_script || !instance.image || !instance.log_parser)
-      throw new Error("Missing SWE evaluation materials");
-    for (const field of ["FAIL_TO_PASS", "PASS_TO_PASS"]) {
-      const tests =
-        typeof instance[field] === "string" ? JSON.parse(instance[field]) : instance[field];
-      if (!Array.isArray(tests) || !tests.length || tests.some((test) => typeof test !== "string"))
-        throw new Error("Missing SWE test list");
-    }
   }
   const criteria = await readRegular(join(directory, "criteria.md"));
   const skills = Object.create(null);
@@ -83,8 +75,8 @@ export function validateSubmission(output, benchmark) {
   checkFiles(output.files);
   const paths = [...new Set([...Object.keys(output.initial), ...Object.keys(output.files)])];
   if (!paths.length) throw new Error("Missing changed-file evidence");
-  // A test-generation patch must not obtain success by repairing production code.
+  // Test-generation tasks explicitly prohibit modifying production code.
   if (benchmark === "swt" && paths.some((path) => !/(^|\/)tests?\//.test(path)))
-    throw new Error("SWT submission changes files outside test directories");
+    throw new Error("Test-generation submission changes files outside test directories");
   return paths;
 }

@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { buildImage, runPiContainer } from "./docker.mjs";
 import { readAuth } from "./auth.mjs";
 import { assessPiSmoke } from "./pi-smoke-result.mjs";
+import { parseAgentOutput } from "./agent-result.mjs";
 
 async function main() {
   const [provider, model, authFile, ...extra] = process.argv.slice(2);
@@ -60,6 +61,12 @@ Do not modify any other files. Finish with exactly PI_SMOKE_OK.`;
     );
     report.exitCode = execution.code;
     report.cleanupFailed = execution.cleanupFailed ?? false;
+    const output = parseAgentOutput({
+      ...execution,
+      problem: execution.cleanupFailed ? undefined : execution.problem,
+    });
+    await writeFile(join(directory, "agent.json"), JSON.stringify(output, null, 2) + "\n");
+    await writeFile(join(directory, "session.jsonl"), output.sessionJsonl ?? "");
     report.check = assessPiSmoke(execution, { provider, model });
     report.status = report.check.ok ? "passed" : "failed";
     console.log(

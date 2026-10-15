@@ -1,6 +1,6 @@
 ## validation
 
-Applicable to every implementation submission. Check that the agent inspected relevant code and ran checks appropriate to changed behavior, including the affected regression tests. Cite the commands and their observed results. A claimed success without test output is insufficient evidence. Infrastructure failures are not successful validation; record the limitation instead of inferring a pass. Official F2P/P2P results are separate and are not evidence that the agent itself validated its work.
+Applicable to every implementation submission. Check that the agent inspected relevant code and ran checks appropriate to changed behavior, including the affected regression tests. Cite the commands and their observed results. A claimed success without test output is insufficient evidence. Infrastructure failures are not successful validation; record the limitation instead of inferring a pass. Only validation performed by the agent counts as evidence that it validated its work.
 
 ## review-before-commit
 

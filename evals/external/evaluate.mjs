@@ -15,6 +15,7 @@ import { verifyActivation } from "./patch.mjs";
 import { readRegular, readTree } from "../runner/files.mjs";
 import { readAuth, redact } from "../runner/auth.mjs";
 import { parseAgentOutput, assessAgent } from "../runner/agent-result.mjs";
+import { sessionMessages } from "../runner/session.mjs";
 import { runPiContainer } from "../runner/docker.mjs";
 import { checkSelection } from "../runner/judge.mjs";
 import {
@@ -29,88 +30,25 @@ import {
 const root = fileURLToPath(new URL(".", import.meta.url));
 const saveJson = (path, value) => writeFile(path, JSON.stringify(value, null, 2) + "\n");
 
-export async function evaluateOracle(
-  materials,
-  patch,
-  { control, image, directory, signal, run = runIsolated },
-) {
-  await mkdir(directory, { recursive: true });
-  const request = {
-    action: "plan",
-    benchmark: materials.manifest.benchmark,
-    instance: materials.instance,
-    patch,
-  };
-  const plan = decodeExecution(
-    await run(control, ["/opt/harness-python/bin/python", "/harness/adapter.py"], request, {
-      signal,
-      network: "bridge",
-    }),
-  );
-  await saveJson(join(directory, "plan.json"), plan);
-  const logs = [];
-  for (const stage of plan.stages) {
-    const execution = await run(
-      image,
-      ["node", "/harness/external/oracle-entry.mjs"],
-      { script: stage.script, ...(materials.manifest.benchmark === "swe" ? { patch } : {}) },
-      { signal, network: "bridge" },
-    );
-    await saveJson(join(directory, `${stage.name}-execution.json`), execution);
-    const output = decodeExecution(execution);
-    await saveJson(join(directory, `${stage.name}.json`), output);
-    if (output.problem || output.code === null)
-      throw new Error(`Oracle ${stage.name} timed out or exceeded its output limit`);
-    // A rejected model patch is an unsuccessful submission, not a test pass.
-    // Reference-patch failures are detected by the preflight gold validation.
-    logs.push(output.log);
-  }
-  const grades = decodeExecution(
-    await run(
-      control,
-      ["/opt/harness-python/bin/python", "/harness/adapter.py"],
-      {
-        action: "grade",
-        benchmark: materials.manifest.benchmark,
-        instance: materials.instance,
-        patch,
-        logs,
-      },
-      { signal },
-    ),
-  );
-  await saveJson(join(directory, "official.json"), grades);
-  return grades[materials.manifest.instance_id];
-}
-
 async function prepare(materials, directory, signal) {
   const runner = await readTree(join(root, "..", "runner"));
   const controlFiles = Object.fromEntries(
     Object.entries(runner).map(([path, content]) => [`runner/${path}`, content]),
   );
   controlFiles.Dockerfile = await readRegular(join(root, "Dockerfile"));
-  controlFiles["external/adapter.py"] = await readRegular(join(root, "adapter.py"));
+  controlFiles["external/environment.py"] = await readRegular(join(root, "environment.py"));
   const control = await build(join(directory, "control-build"), controlFiles, { signal });
-  const metadata = decodeExecution(
-    await runIsolated(
-      control,
-      ["/opt/harness-python/bin/python", "/harness/adapter.py"],
-      { action: "metadata" },
-      { signal },
-    ),
-  );
-  await saveJson(join(directory, "harness-environment.json"), metadata);
-  const plan = decodeExecution(
-    await runIsolated(
-      control,
-      ["/opt/harness-python/bin/python", "/harness/adapter.py"],
-      { action: "plan", benchmark: materials.manifest.benchmark, instance: materials.instance },
-      { signal, network: "bridge" },
-    ),
-  );
-  await saveJson(join(directory, "environment-plan.json"), plan);
   let source;
-  if (plan.builds) {
+  if (materials.manifest.benchmark === "swt") {
+    const plan = decodeExecution(
+      await runIsolated(
+        control,
+        ["/opt/harness-python/bin/python", "/harness/environment.py"],
+        { instance: materials.instance },
+        { signal, network: "bridge" },
+      ),
+    );
+    await saveJson(join(directory, "environment-plan.json"), plan);
     for (const [index, stage] of plan.builds.entries()) {
       source = {
         image: await build(join(directory, `upstream-build-${index}`), stage.files, {
@@ -133,7 +71,6 @@ async function prepare(materials, directory, signal) {
         materials.manifest.benchmark === "swt",
       ),
       "agent-entry.mjs": await readRegular(join(root, "agent-entry.mjs")),
-      "oracle-entry.mjs": await readRegular(join(root, "oracle-entry.mjs")),
       "patch.mjs": await readRegular(join(root, "patch.mjs")),
     },
     { signal },
@@ -145,30 +82,12 @@ async function prepare(materials, directory, signal) {
     pins,
     platform: "linux/amd64",
     agentBudgetSeconds: 600,
-    oracleStageBudgetSeconds: 600,
     cpus: 1,
     memory: "4g",
     network: "bridge",
   };
   await saveJson(join(directory, "environment.json"), environment);
-  const gold = await evaluateOracle(
-    materials,
-    materials.instance[materials.manifest.benchmark === "swe" ? "patch" : "test_patch"],
-    { control, image, directory: join(directory, "validation-gold"), signal },
-  );
-  if (!gold?.resolved)
-    throw new Error("Reference oracle did not resolve; environment is not validated");
-  if (materials.manifest.benchmark === "swe") {
-    const baseline = await evaluateOracle(materials, "", {
-      control,
-      image,
-      directory: join(directory, "validation-base"),
-      signal,
-    });
-    if (baseline?.resolved || !baseline?.patch_successfully_applied || baseline?.infra_failure)
-      throw new Error("Baseline oracle is invalid or already resolves the issue");
-  }
-  return { ...environment, validated: true };
+  return environment;
 }
 
 async function review(materials, output, selection, auth, image, directory, signal) {
@@ -184,9 +103,8 @@ async function review(materials, output, selection, auth, image, directory, sign
   const judge = parseAgentOutput({ ...execution, stdout: redact(execution.stdout, auth) });
   await saveJson(join(directory, "judge.json"), judge);
   const assessment = assessAgent(judge, selection);
-  const messages = judge.events.filter(
-    (event) => event.type === "message_end" && event.message?.role === "assistant",
-  );
+  await writeFile(join(directory, "judge-session.jsonl"), judge.sessionJsonl ?? "");
+  const messages = sessionMessages(judge).filter((message) => message.role === "assistant");
   if (
     !assessment.ok ||
     judge.runtime.mode !== "review" ||
@@ -295,38 +213,19 @@ export async function main(args = process.argv.slice(2)) {
         result.cleanupFailed = execution.cleanupFailed ?? false;
         const output = parseAgentOutput({ ...execution, stdout: redact(execution.stdout, auth) });
         await saveJson(join(destination, "agent.json"), output);
-        await writeFile(
-          join(destination, "trace.jsonl"),
-          output.events.map((event) => JSON.stringify(event)).join("\n") + "\n",
-        );
+        await writeFile(join(destination, "session.jsonl"), output.sessionJsonl ?? "");
         result.agent = assessAgent(output, { provider, model, cwd: "/testbed" });
         if (!result.agent.ok) throw new Error(result.agent.reason);
         verifyActivation(output, condition === "with-skill" ? materials.manifest.skill : undefined);
         result.activation =
           condition === "with-skill" ? "explicit-command-observed" : "target-not-supplied";
         await writeFile(join(destination, "submission.patch"), output.patch ?? "");
-        await saveJson(join(destination, "prediction.json"), {
-          instance_id: materials.manifest.instance_id,
-          model_name_or_path: condition,
-          model_patch: output.patch,
-        });
         try {
           validateSubmission(output, materials.manifest.benchmark);
           result.scope = { ok: true };
         } catch (error) {
           result.scope = { ok: false, reason: error.message };
         }
-        if (result.scope.ok)
-          result.official = await evaluateOracle(materials, output.patch, {
-            ...report.environment,
-            directory: join(destination, "oracle"),
-            signal: abort.signal,
-          });
-        else
-          result.official = {
-            excluded: true,
-            reason: "Invalid submission scope/evidence; not scored",
-          };
         Object.assign(
           result,
           await review(
@@ -342,9 +241,7 @@ export async function main(args = process.argv.slice(2)) {
         result.status = "reviewed";
         await save();
       }
-      report.behaviorStatus = reviewStatus(report.conditions);
-      // Behavioral compliance and benchmark resolution are never combined into a score.
-      report.status = report.behaviorStatus;
+      report.status = reviewStatus(report.conditions);
     }
   } catch (error) {
     report.status = "error";

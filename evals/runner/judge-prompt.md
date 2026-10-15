@@ -5,7 +5,7 @@ Compare the initial files with the complete before/after changes and ordered tra
 Return exactly one JSON object, with no Markdown fences:
 {"criteria":[{"criterion":"<exact criterion ID>","verdict":"satisfied|violated|not-applicable|insufficient-evidence","evidence":["<evidence ID>"],"reason":"<brief explanation>"}]}
 
-Return every criterion exactly once. Use only the supplied evidence IDs. For code evidence, identify the relevant test, expression or operation in the reason. Event IDs retain the one-based line positions in the archived trace. Cite tool starts and results to establish ordering, attempts and observed effects. Do not infer actual filesystem effects from a command alone. Tool output may itself be truncated; if the omitted content is needed, report insufficient-evidence rather than infer it.
+Return every criterion exactly once. Use only the supplied evidence IDs. For code evidence, identify the relevant test, expression or operation in the reason. Session IDs in evidence (`session:<line>`) retain the one-based line positions in the archived native session JSONL. System messages record prompt sections and tool declarations; later system messages update that state. Cite assistant tool-call blocks and tool-result messages to establish ordering, attempts and observed effects. Do not infer actual filesystem effects from a command alone. Tool output may itself be truncated; if the omitted content is needed, report insufficient-evidence rather than infer it.
 
 - satisfied: applicable, with concrete evidence that the expected behavior was followed.
 - violated: applicable, with concrete evidence of a contrary action or unresolved problem the criterion requires addressing.

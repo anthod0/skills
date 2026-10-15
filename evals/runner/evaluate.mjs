@@ -136,10 +136,7 @@ async function main() {
           stdout: redact(execution.stdout, auth),
         });
         await writeFile(join(conditionRoot, "agent.json"), JSON.stringify(output, null, 2) + "\n");
-        await writeFile(
-          join(conditionRoot, "trace.jsonl"),
-          output.events.map((event) => JSON.stringify(event)).join("\n") + "\n",
-        );
+        await writeFile(join(conditionRoot, "session.jsonl"), output.sessionJsonl ?? "");
         if (execution.cleanupFailed) throw new Error(execution.problem);
         result.agent = assessAgent(output, { provider, model });
         result.runtime = output.runtime;

@@ -8,10 +8,12 @@ import { readRegular, writeTree } from "./files.mjs";
 import { changesBetween } from "./submission.mjs";
 import { conditions, criterionIds } from "./behavior.mjs";
 import { reviewRun } from "./judge.mjs";
+import { sessionJsonl, editSession } from "./test-session.mjs";
+import { sessionMessages } from "./session.mjs";
 
 const selection = { provider: "example", model: "review-model" };
 const originalSelection = { provider: "example", model: "agent-model" };
-function packet(selected, files, text, events = []) {
+function packet(selected, files, text) {
   return {
     runtime: {
       uid: 1000,
@@ -24,19 +26,14 @@ function packet(selected, files, text, events = []) {
     },
     execution: { code: 0 },
     files,
-    events: [
-      ...events,
+    sessionJsonl: sessionJsonl([
       {
-        type: "message_end",
-        message: {
-          role: "assistant",
-          ...selected,
-          stopReason: "stop",
-          content: [{ type: "text", text }],
-        },
+        role: "assistant",
+        ...selected,
+        stopReason: "stop",
+        content: [{ type: "text", text }],
       },
-      { type: "agent_end" },
-    ],
+    ]),
   };
 }
 
@@ -69,8 +66,7 @@ async function withArchive(run) {
       };
       const output = packet(originalSelection, exported, "Done");
       files[`${condition}/agent.json`] = JSON.stringify(output);
-      files[`${condition}/trace.jsonl`] =
-        output.events.map((event) => JSON.stringify(event)).join("\n") + "\n";
+      files[`${condition}/session.jsonl`] = output.sessionJsonl;
       files[`${condition}/changes.json`] = JSON.stringify(changesBetween(inputs.files, exported));
     }
     await writeTree(testRoot, files);
@@ -124,26 +120,19 @@ test("re-review uses archived inputs, grades scope violations too, and never ove
   });
 });
 
-test("mismatched, missing and oversized evidence fail before model calls rather than earning compliance", async () => {
-  for (const problem of ["trace", "changes", "missing", "oversized"]) {
+test("mismatched and missing evidence fail before model calls rather than earning compliance", async () => {
+  for (const problem of ["trace", "changes", "missing"]) {
     await withArchive(async (root, options) => {
       for (const condition of conditions) {
         const path = join(root, condition);
-        if (problem === "trace") await writeFile(join(path, "trace.jsonl"), "{}\n");
+        if (problem === "trace") await writeFile(join(path, "session.jsonl"), "{}\n");
         if (problem === "changes") await writeFile(join(path, "changes.json"), "[]");
         if (problem === "missing") {
           const output = JSON.parse(await readRegular(join(path, "agent.json")));
-          output.events.pop();
+          editSession(output, (entries) => {
+            entries.pop();
+          });
           await writeFile(join(path, "agent.json"), JSON.stringify(output));
-        }
-        if (problem === "oversized") {
-          const output = JSON.parse(await readRegular(join(path, "agent.json")));
-          output.events[0].message.content[0].text = "x".repeat(512 * 1024);
-          await writeFile(join(path, "agent.json"), JSON.stringify(output));
-          await writeFile(
-            join(path, "trace.jsonl"),
-            output.events.map((event) => JSON.stringify(event)).join("\n"),
-          );
         }
       }
       let calls = 0;
@@ -163,6 +152,36 @@ test("mismatched, missing and oversized evidence fail before model calls rather 
   }
 });
 
+test("re-review sends native session evidence larger than 512 KiB to the judge intact", async () => {
+  await withArchive(async (root, options) => {
+    const text = "x".repeat(1024 * 1024);
+    for (const condition of conditions) {
+      const path = join(root, condition);
+      const output = JSON.parse(await readRegular(join(path, "agent.json")));
+      editSession(output, (entries) => {
+        entries[1].message.content[0].text = text;
+      });
+      await writeFile(join(path, "agent.json"), JSON.stringify(output));
+      await writeFile(join(path, "session.jsonl"), output.sessionJsonl);
+    }
+    let calls = 0;
+    const review = await reviewRun(root, selection, {
+      ...options,
+      run: async (image, payload) => {
+        calls++;
+        const material = JSON.parse(payload.task);
+        assert.equal(
+          material.evidence.find((item) => item.id === "session:2").record.message.content[0].text,
+          text,
+        );
+        return successfulJudge(image, payload);
+      },
+    });
+    assert.equal(calls, 2);
+    assert.ok(review.report.conditions.every((result) => result.status === "reviewed"));
+  });
+});
+
 test("judge protocol errors, tool attempts and transport failures remain review errors", async () => {
   for (const problem of ["json", "tool", "timeout"]) {
     await withArchive(async (root, options) => {
@@ -172,14 +191,17 @@ test("judge protocol errors, tool attempts and transport failures remain review 
           if (problem === "timeout") return { code: null, problem: "Timed out", stdout: "" };
           const execution = successfulJudge(image, payload);
           const output = JSON.parse(execution.stdout);
-          if (problem === "json")
-            output.events[0].message.content[0].text = "not JSON synthetic-review-key";
-          else
-            output.events[0].message.content.push({
-              type: "toolCall",
-              name: "bash",
-              arguments: { command: "do not execute" },
-            });
+          editSession(output, (entries) => {
+            if (problem === "json")
+              entries[1].message.content[0].text = "not JSON synthetic-review-key";
+            else
+              entries[1].message.content.push({
+                type: "toolCall",
+                id: "attempt",
+                name: "bash",
+                arguments: { command: "do not execute" },
+              });
+          });
           return { code: 0, stdout: JSON.stringify(output) };
         },
       });
@@ -231,7 +253,11 @@ test("judge cleanup failure preserves the completed export and stops subsequent 
     const archived = JSON.parse(
       await readRegular(join(review.directory, "without-skill/judge.json")),
     );
-    assert.equal(JSON.parse(archived.events[0].message.content[0].text).criteria.length, 4);
+    assert.equal(JSON.parse(sessionMessages(archived)[0].content[0].text).criteria.length, 4);
+    assert.equal(
+      await readRegular(join(review.directory, "without-skill/session.jsonl")),
+      archived.sessionJsonl,
+    );
     assert.equal(review.report.conditions[1].status, "error");
     assert.equal(review.report.conditions[1].behavior, undefined);
   });

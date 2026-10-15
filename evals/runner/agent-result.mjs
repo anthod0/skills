@@ -1,29 +1,34 @@
 import { checkFiles } from "./files.mjs";
 import { redact } from "./auth.mjs";
+import { sessionEntries, sessionMessages } from "./session.mjs";
 
 export function serializeAgentOutput(output, auth, currentAuth) {
   if (!currentAuth) {
-    // Unknown refreshed credentials may be present anywhere in arguments,
-    // messages, IDs, results, stderr, or files. Retain only enum/boolean metadata.
+    // Without the refreshed credential state, no session/file/stderr content is safe to export.
     output = {
       runtime: output.runtime,
       files: null,
-      traceContent: "withheld",
+      sessionJsonl: null,
       artifactError: "Authentication state unavailable; export content withheld",
       execution: { code: output.execution.code, problem: "Authentication state unavailable" },
-      events: output.events
-        .filter((event) => ["tool_execution_start", "tool_execution_end"].includes(event.type))
-        .map((event, index) => ({
-          type: event.type,
-          sequence: index + 1,
-          toolName: ["read", "write", "edit", "bash"].includes(event.toolName)
-            ? event.toolName
-            : "unknown",
-          ...(event.type === "tool_execution_end" ? { isError: event.isError === true } : {}),
-        })),
     };
+  } else {
+    output = { ...output, sessionJsonl: redact(output.sessionJsonl ?? "", auth, currentAuth) };
   }
-  return redact(JSON.stringify(output), auth, ...(currentAuth ? [currentAuth] : []));
+  const serialized = redact(JSON.stringify(output), auth, ...(currentAuth ? [currentAuth] : []));
+  // Docker transport has a 4 MiB bound. Reserve space for its trailing newline
+  // and diagnostics; never stream a partial native session or workspace export.
+  if (Buffer.byteLength(serialized) > 4 * 1024 * 1024 - 1024) {
+    return JSON.stringify({
+      runtime: output.runtime,
+      files: null,
+      sessionJsonl: null,
+      execution: { code: output.execution.code },
+      artifactError:
+        "Native session/workspace export exceeds the 4 MiB transport limit; content withheld",
+    });
+  }
+  return serialized;
 }
 
 export function parseAgentOutput(execution) {
@@ -39,21 +44,31 @@ export function parseAgentOutput(execution) {
   if (
     !output?.runtime ||
     !output.execution ||
-    !Array.isArray(output.events) ||
-    output.events.some((event) => !event || typeof event.type !== "string")
+    !(typeof output.sessionJsonl === "string" || output.artifactError)
   )
     throw new Error("Invalid agent export");
-  if (!output.artifactError) checkFiles(output.files);
+  if (!output.artifactError) {
+    sessionEntries(output);
+    checkFiles(output.files);
+  }
   return output;
 }
 
 export function assessAgent(output, { provider, model, cwd = "/workspace" }) {
-  const { runtime, execution, events } = output;
-  const messages = events
-    .filter((event) => event.type === "message_end" && event.message?.role === "assistant")
-    .map((event) => event.message);
-  const starts = events.filter((event) => event.type === "tool_execution_start");
-  const ends = events.filter((event) => event.type === "tool_execution_end");
+  const { runtime, execution } = output;
+  let allMessages;
+  try {
+    allMessages = sessionMessages(output);
+  } catch (error) {
+    return { ok: false, reason: output.artifactError ?? error.message };
+  }
+  const messages = allMessages.filter((message) => message.role === "assistant");
+  const calls = messages.flatMap((message) =>
+    Array.isArray(message.content)
+      ? message.content.filter((part) => part.type === "toolCall")
+      : [],
+  );
+  const results = allMessages.filter((message) => message.role === "toolResult");
   const sum = (get) =>
     messages.length &&
     messages.every((message) => Number.isFinite(get(message)) && get(message) >= 0)
@@ -61,8 +76,8 @@ export function assessAgent(output, { provider, model, cwd = "/workspace" }) {
       : null;
   const metrics = {
     assistantMessages: messages.length,
-    toolCalls: starts.length,
-    toolErrors: ends.filter((event) => event.isError).length,
+    toolCalls: calls.length,
+    toolErrors: results.filter((message) => message.isError).length,
     usage: Object.fromEntries(
       ["input", "output", "cacheRead", "cacheWrite", "totalTokens"].map((key) => [
         key,
@@ -82,24 +97,20 @@ export function assessAgent(output, { provider, model, cwd = "/workspace" }) {
   )
     return fail("Container runtime or credential setup was not verified");
   if (output.artifactError) return fail(output.artifactError);
-  if (execution.problem || execution.code !== 0)
-    return fail("Pi failed, timed out, or exceeded its output limit");
+  if (execution.problem || execution.code !== 0) return fail("Pi failed or timed out");
   if (
     !messages.length ||
     messages.some(
       (message) =>
         message.provider !== provider ||
         message.model !== model ||
-        !["stop", "toolUse"].includes(message.stopReason),
+        !["stop", "toolUse"].includes(message.stopReason) ||
+        !Array.isArray(message.content),
     )
   )
     return fail("Model mismatch or incomplete model response");
   const last = messages.at(-1);
-  if (
-    events.filter((event) => event.type === "agent_end").length !== 1 ||
-    last.stopReason !== "stop" ||
-    !Array.isArray(last.content)
-  )
+  if (last.stopReason !== "stop" || allMessages.at(-1) !== last)
     return fail("Agent did not finish");
   const finalResponse = last.content
     .filter((part) => part?.type === "text")
@@ -108,29 +119,28 @@ export function assessAgent(output, { provider, model, cwd = "/workspace" }) {
     .trim();
   if (!finalResponse) return fail("No final response");
   if (
-    starts.some(
-      (event) =>
-        typeof event.toolCallId !== "string" ||
-        !event.toolCallId ||
-        !event.args ||
-        typeof event.args !== "object" ||
-        Array.isArray(event.args) ||
-        !["read", "write", "edit", "bash"].includes(event.toolName),
+    calls.some(
+      (call) =>
+        typeof call.id !== "string" ||
+        !call.id ||
+        !call.arguments ||
+        typeof call.arguments !== "object" ||
+        Array.isArray(call.arguments) ||
+        !["read", "write", "edit", "bash"].includes(call.name),
     ) ||
-    ends.some(
-      (event) =>
-        typeof event.isError !== "boolean" || !event.result || typeof event.result !== "object",
+    results.some(
+      (result) => typeof result.isError !== "boolean" || !Array.isArray(result.content),
     ) ||
-    starts.length !== ends.length ||
-    new Set(starts.map((event) => event.toolCallId)).size !== starts.length ||
-    starts.some((start) => {
-      const matches = ends.filter(
-        (end) => end.toolCallId === start.toolCallId && end.toolName === start.toolName,
+    calls.length !== results.length ||
+    new Set(calls.map((call) => call.id)).size !== calls.length ||
+    calls.some((call) => {
+      const matches = results.filter(
+        (result) => result.toolCallId === call.id && result.toolName === call.name,
       );
-      return matches.length !== 1 || events.indexOf(matches[0]) < events.indexOf(start);
+      const owner = messages.find((message) => message.content.includes(call));
+      return matches.length !== 1 || allMessages.indexOf(matches[0]) < allMessages.indexOf(owner);
     })
-  ) {
-    return fail("Incomplete tool trace");
-  }
+  )
+    return fail("Incomplete tool history");
   return { ...metrics, ok: true, finalResponse };
 }
