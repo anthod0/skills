@@ -1,0 +1,17 @@
+{
+  "skill": "implement",
+  "benchmark": "swe",
+  "classification": "B",
+  "dataset": "SWE-bench/SWE-bench_Multilingual",
+  "revision": "846e647b9f33c0b51b739d005d13d85493c9af09",
+  "split": "test",
+  "environment_image": "swebench/sweb.eval.x86_64.axios_1776_axios-5085@sha256:d0a38e17c8f11e41c3d71b46c532db321f732a27e80d57c798e38913da195def",
+  "instance_id": "axios__axios-5085",
+  "instance_sha256": "e8d228e61a9805c7d1be513736692739b31513c645b4e42cc580da128707084e",
+  "dependencies": [
+    "write-good-test",
+    "write-good-docs",
+    "test-filesystem-safety",
+    "code-review"
+  ]
+}

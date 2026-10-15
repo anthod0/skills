@@ -1,0 +1,13 @@
+{
+  "skill": "write-good-test",
+  "benchmark": "swt",
+  "classification": "B",
+  "dataset": "princeton-nlp/SWE-bench_Lite",
+  "revision": "6ec7bb89b9342f664a54a6e0a6ea6501d3437cc2",
+  "split": "test",
+  "instance_id": "sympy__sympy-20590",
+  "instance_sha256": "0bc509ea33d26871ecfedfa3d6eb67744a9acd1158f53e225fa43c4e3ae9b506",
+  "dependencies": [
+    "test-filesystem-safety"
+  ]
+}

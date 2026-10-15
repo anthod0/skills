@@ -2,6 +2,10 @@
 
 Compare how agents work with and without a skill. Deterministic checks enforce the allowed editing scope; an independent, tool-free model reviews behavior against case-specific criteria using initial files, final changes and the operation trace. Fixture tests remain available for the agent's own validation inside Docker.
 
+## External benchmark tasks
+
+The [external runner](external/README.md) evaluates Axios implementation and Astropy/SymPy regression-test generation with pinned SWE-bench/SWT materials and original grading functions. It provides offline preflight, isolated reference-oracle preparation and with/without comparisons, with benchmark outcomes separate from behavioral review. It does not replace the fixture cases below; the filesystem-safety scene remains unchanged.
+
 ## Run a comparison
 
 Requires Bun (or Node.js 22+), Docker and stored Pi authentication for both selected providers. From the repository root:

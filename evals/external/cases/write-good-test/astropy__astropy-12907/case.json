@@ -1,0 +1,13 @@
+{
+  "skill": "write-good-test",
+  "benchmark": "swt",
+  "classification": "B",
+  "dataset": "princeton-nlp/SWE-bench_Lite",
+  "revision": "6ec7bb89b9342f664a54a6e0a6ea6501d3437cc2",
+  "split": "test",
+  "instance_id": "astropy__astropy-12907",
+  "instance_sha256": "6a35721262cc9fe7ae95f6773a8f7d3c5df6bc3140668ed221a3048403531607",
+  "dependencies": [
+    "test-filesystem-safety"
+  ]
+}

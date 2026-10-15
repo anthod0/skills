@@ -47,7 +47,7 @@ export function parseAgentOutput(execution) {
   return output;
 }
 
-export function assessAgent(output, { provider, model }) {
+export function assessAgent(output, { provider, model, cwd = "/workspace" }) {
   const { runtime, execution, events } = output;
   const messages = events
     .filter((event) => event.type === "message_end" && event.message?.role === "assistant")
@@ -74,7 +74,7 @@ export function assessAgent(output, { provider, model }) {
   const fail = (reason) => ({ ...metrics, ok: false, reason });
   if (
     runtime.uid !== 1000 ||
-    runtime.cwd !== "/workspace" ||
+    runtime.cwd !== cwd ||
     runtime.authMode !== 0o600 ||
     runtime.provider !== provider ||
     !/^\d+\.\d+\.\d+$/.test(runtime.piVersion) ||
