@@ -38,7 +38,7 @@ An optional final argument supplies an auth file. Credential selection follows t
 
 Both conditions use the same task, model, high reasoning, ten-minute budget and built image. Dependency skills are identical in both conditions; only the target skill is removed in `without-skill`. Implementation tasks supply `write-good-test`, `write-good-docs`, `test-filesystem-safety` and `code-review` as dependencies. Test-generation tasks supply `test-filesystem-safety`. This measures the target's incremental effect given those dependencies, not the whole package versus no skills.
 
-The target is explicitly activated using Pi's `/skill:<name>` command in `with-skill`. The trace must show expanded instructions in the user context. This matters for `implement`, whose source disables automatic invocation.
+The target is explicitly activated using Pi's `/skill:<name>` command in `with-skill`. The trace must show expanded instructions in the user context.
 
 Agents can run their own validation inside the container; commands and results become behavioral evidence. Test-generation edits outside test directories are scope violations, including production-file renames into test directories. Scope violations still receive behavior review.
 

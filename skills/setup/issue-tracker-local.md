@@ -8,6 +8,14 @@ Specs (also known as PRDs) for this repo live as markdown files in `.scratch/`. 
 - The spec is `.scratch/<feature-slug>/spec.md`
 - Comments and conversation history append to the bottom of the spec under a `## Comments` heading
 
+## Spec status
+
+Record `Status: <value>` near the top of the spec file:
+
+- `draft` — new spec or requirements under discussion.
+- `confirmed` — explicitly confirmed by the user, ready for implementation.
+- `completed` — implemented, validated, and acceptance criteria met.
+
 ## When a skill says "publish to the issue tracker"
 
 Create a new file under `.scratch/<feature-slug>/` (creating the directory if needed).

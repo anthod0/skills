@@ -1,6 +1,6 @@
 # ADR Format
 
-ADRs live in `docs/adr/` and use sequential numbering: `0001-slug.md`, `0002-slug.md`, etc. Together they form a concise set of the architectural decisions that currently govern the system and the reasons for them; they are not an immutable historical log.
+ADRs live in `docs/adr/` and use sequential numbering: `0001-slug.md`, `0002-slug.md`, etc. Use a concise, precise kebab-case slug that conveys the decision’s scope and key choice, so readers can judge relevance from the filename alone. Together they form a concise set of the architectural decisions that currently govern the system and the reasons for them; they are not an immutable historical log.
 
 Create the `docs/adr/` directory lazily — only when the first ADR is needed.
 

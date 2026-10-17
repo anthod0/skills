@@ -1,15 +1,15 @@
 ---
-name: setup-skills
-description: Configure this repo for the engineering skills — set up its issue tracker, domain doc layout, and workspace creation. Run once before first use of the other engineering skills.
+name: setup
+description: Initialize a repository's agent development workflow. Use when the user explicitly requests initialization.
 disable-model-invocation: true
 ---
 
-# Setup Skills
+# Setup
 
 Scaffold the per-repo configuration that the engineering skills assume:
 
 - **Issue tracker** — where issues live (Local Markdown by default; external trackers require an explicit choice)
-- **Domain docs** — where `CONTEXT.md` and ADRs live, and the consumer rules for reading them
+- **Domain docs** — self-contained workspace rules for discovering, reading, and maintaining `CONTEXT.md` and ADRs
 - **Workspaces** — a creation script plus an `AGENTS.md` / `CLAUDE.md` record so later agents create isolated working directories the same way
 
 This is a prompt-driven skill, not a deterministic script. Explore, confirm the configuration choices below, then generate, check, and write the files without a separate draft approval.
@@ -47,9 +47,9 @@ Recommend **Local Markdown** and ask the user to accept it or explicitly choose 
 - **GitLab** — GitLab Issues via [`glab`](https://gitlab.com/gitlab-org/cli); use only when explicitly selected
 - **Other** — record the user's workflow as freeform prose
 
-Record the confirmed choice in `docs/agents/issue-tracker.md`.
+Record the confirmed choice in `docs/agents/issue-tracker.md`. Preserve the spec status convention from the selected tracker template. For custom trackers, include the same status convention from [the Local Markdown template](./issue-tracker-local.md#spec-status), adapting only the field's location to the tracker.
 
-**Section B — Domain docs.** Use one `CONTEXT.md` and `docs/adr/` at the repo root. Write this single-context layout without asking.
+**Section B — Domain docs.** Use one `CONTEXT.md` and `docs/adr/` at the repo root. Initialize `docs/agents/domain.md`, `docs/agents/context-format.md`, and `docs/agents/adr-format.md` with the modeling and format templates below, without asking. These workspace documents must contain the complete domain-modeling conventions without requiring an external skill. Do not create an empty `CONTEXT.md` or `docs/adr/`; create them only when confirmed terms or decisions need recording.
 
 **Section C — Workspaces.**
 
@@ -90,7 +90,11 @@ The block:
 
 ### Domain docs
 
-[one-line summary of the single-context layout]. See `docs/agents/domain.md`.
+Read `CONTEXT.md` at the repo root for domain terminology. See `docs/agents/domain.md`.
+
+### ADRs
+
+List the contents of `docs/adr/`. Read relevant ADRs as needed, and explicitly flag conflicts with them.
 
 ### Workspaces
 
@@ -104,12 +108,16 @@ Then write the docs files using the seed templates in this skill folder as a sta
 - [issue-tracker-github.md](./issue-tracker-github.md) — GitHub issue tracker
 - [issue-tracker-gitlab.md](./issue-tracker-gitlab.md) — GitLab issue tracker
 - [issue-tracker-local.md](./issue-tracker-local.md) — local-markdown issue tracker
-- [domain.md](./domain.md) — domain doc consumer rules + layout
+- [domain.md](./domain.md) → `docs/agents/domain.md` — domain discovery, modeling, and maintenance rules
+- [context-format.md](./context-format.md) → `docs/agents/context-format.md` — glossary format and scope
+- [adr-format.md](./adr-format.md) → `docs/agents/adr-format.md` — ADR admission criteria, naming, format, and maintenance
 
 For "other" issue trackers, write `docs/agents/issue-tracker.md` from scratch using the user's description.
 
 Write the creation script at the selected path from the chosen scheme file, creating its parent directory if needed, and make it executable. Its scope is workspace creation only; do not add merge, push, PR, or workspace removal operations.
 
 ### 4. Done
+
+Verify that all three domain guides exist, the chosen `AGENTS.md` or `CLAUDE.md` links to `docs/agents/domain.md`, and that guide links to both format documents with their reading triggers. Check that the generated domain instructions can be followed without an external skill. Preserve existing domain content and project-specific conventions when updating setup output.
 
 Tell the user the setup is complete and which engineering skills will now read from these files. Mention they can edit `docs/agents/*.md` directly later — re-running this skill is only necessary if they want to switch issue trackers, change workspace scheme, or restart from scratch. Later agents use the command recorded in project instructions as the starting point and may consult the scheme files or adapt creation steps to the repository's current state.

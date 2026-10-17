@@ -1,10 +1,9 @@
 ---
 name: implement
-description: "Implement a piece of coding work based on user-confirmed requirements."
-disable-model-invocation: true
+description: "Implement coding work from a user-confirmed spec. Use when the user identifies a confirmed spec to implement."
 ---
 
-Implement the user-confirmed work. If a spec exists for the work, read it in full and treat it as the source of truth.
+Read the confirmed spec identified by the user in full and treat it as the source of truth for implementation.
 
 Apply `/write-good-test` when writing or modifying tests, and `/write-good-docs` when writing or modifying documentation within its scope.
 
