@@ -1,6 +1,6 @@
 ---
 name: write-good-docs
-description: Read this skill when writing documentation that explains the current system, including README files, AGENTS.md, and usage guides. Not applicable to specs, PRDs, requirements documents, design proposals, ADRs, or CONTEXT.md.
+description: Write clear, accurate, and useful documentation. Use when writing documentation except specs, requirements documents, ADRs, CONTEXT.md and handoff documents.
 ---
 
 # Write Good Docs
