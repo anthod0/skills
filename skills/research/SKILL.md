@@ -1,6 +1,6 @@
 ---
 name: research
-description: Research external topics using primary sources and document the findings with citations. Use when answering a question or completing a task requires investigating information outside the current code repository.
+description: Research external topics using primary sources and document the findings with citations. Use when the user requests focused research on a topic outside the current code repository.
 ---
 
 ## Research workflow
