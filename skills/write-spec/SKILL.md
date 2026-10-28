@@ -1,13 +1,13 @@
 ---
 name: write-spec
-description: Read this skill when writing a spec, PRD, requirements document, or design proposal to capture user-confirmed intent from the discussion. Not applicable to README files, usage guides, or similar documentation.
+description: Capture confirmed intent in specs and maintain implementation tickets. Use when writing a spec or design proposal, splitting a spec into tickets, or updating tickets with confirmed decisions.
 ---
 
 This skill takes the current conversation context and codebase understanding and produces a spec. Before synthesizing it, read and apply [`/decision-boundaries`](../decision-boundaries/SKILL.md). Do not conduct a general requirements interview; ask only for agreement required by those boundaries. If a decision remains blocked, stop before publishing the spec.
 
 Read `docs/agents/issue-tracker.md` when present. Without an explicit tracker configuration, use Local Markdown under `.scratch/`.
 
-When the user asks to split a spec into issues or tickets, read and follow [TICKETS.md](TICKETS.md).
+When splitting a spec into issues or tickets, or updating tickets with confirmed decisions, read and follow [TICKETS.md](TICKETS.md). Use its ticket process rather than the full spec template below; decomposition does not require every downstream design decision to be settled.
 
 Treat the conversation and referenced source material as the authority for the requested requirements and scope.
 

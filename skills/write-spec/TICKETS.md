@@ -1,8 +1,8 @@
 # Implementation Tickets
 
-Read and follow this document when the user asks to split a confirmed spec into issues or implementation tickets.
+Read and follow this document when splitting a confirmed spec into tickets or updating tickets with confirmed decisions.
 
-Break the confirmed spec into implementation sub-specs, one per ticket. Spec confirmation is a prerequisite for decomposition. The full spec remains authoritative for the overall outcome, scope, and final acceptance. Tickets define their own deliverables, acceptance criteria, and genuine dependencies; they do not replace or weaken the full spec's requirements.
+Initially record each ticket's goal, scope highlights, critical constraints, acceptance criteria, and dependencies. Supplement relevant tickets as later decisions are confirmed; do not require a complete design at decomposition time. The full spec remains authoritative for the overall outcome, scope, and final acceptance. Tickets do not replace or weaken its requirements.
 
 Propose the breakdown first and publish only after the user approves it. Do not implement code during decomposition or automatically create tickets merely because the user asks to write a spec.
 
@@ -14,7 +14,9 @@ Read the relevant contracts, domain terminology, ADRs, and existing tickets. Use
 
 Read the project's `docs/agents/issue-tracker.md` when present and follow its conventions for locations, statuses, labels, and relationships. Without an explicit tracker configuration, use Local Markdown under `.scratch/`.
 
-Do not conduct a general requirements interview during decomposition. If investigation reveals unresolved questions or requires new user decisions, apply [`/decision-boundaries`](../decision-boundaries/SKILL.md), return to the spec for clarification and confirmation, then resume the affected decomposition. Do not leave these questions to the ticket's implementer or make spec decisions by writing tickets.
+Distinguish readiness to decompose from readiness to implement. Confirmed goals and scope are enough to decompose when deliverables, acceptance criteria, and unresolved dependencies can be identified. If a question prevents defining those boundaries, clarify it with the user before publishing the affected breakdown. Do not conduct a general requirements interview or make spec decisions by writing tickets.
+
+For unresolved design or experimental questions within those boundaries, identify what must be resolved, which ticket owns that work, and which implementation depends on the result. Apply [`/decision-boundaries`](../decision-boundaries/SKILL.md) to choices requiring user confirmation. Investigation and design can proceed, but dependent implementation waits for the necessary results and confirmation.
 
 ## 2. Investigate Implementation Boundaries
 
@@ -44,6 +46,12 @@ Each ticket should:
 
 Distinguish ticket completion from full spec completion. If a stage is mergeable but not yet releasable to users, state that limitation explicitly. Final integration acceptance does not replace each ticket's own acceptance.
 
+### Investigation and Design Tickets
+
+Use a separate investigation or design ticket when its findings or confirmed design are needed by later work. State the questions to answer, the evidence or design artifact to produce, and the confirmation required before dependent implementation starts. A design proposal is not a confirmed contract.
+
+A question local to one delivery slice may remain in that ticket with an explicit resolve-and-confirm step before the affected implementation. Reference the pending result from dependent scope rather than inventing interfaces, fields, or behavior to make tickets look complete.
+
 ### Prerequisite Refactoring and Cross-Cutting Changes
 
 Create a separate prerequisite refactoring ticket only when the refactoring genuinely blocks delivery or requires independent verification. Explain what it enables for subsequent work. Do not add incidental cleanup tickets.
@@ -56,7 +64,7 @@ List each ticket's genuine blockers: prerequisite tickets whose deliverables are
 
 Do not turn a recommended order, shared code location, or stage number into a blocking relationship. Do not unnecessarily serialize work that can proceed in parallel. If only part of a ticket is blocked, consider splitting it rather than blocking the entire ticket by default.
 
-The dependency graph must be acyclic. Work without prerequisites can start immediately; dependent work can proceed once its prerequisites are complete. Use the project's status and label conventions. Do not default to `ready-for-agent` or describe every created ticket as immediately executable.
+The dependency graph must be acyclic. Distinguish completed investigation from confirmed decisions: dependent implementation requires both the prerequisite deliverables and any necessary confirmation. Use the project's status and label conventions. Do not default to `ready-for-agent` or describe every created ticket as immediately executable.
 
 ## 4. Check Coverage and Consistency
 
@@ -65,7 +73,9 @@ Before presenting the breakdown, verify that:
 - Every scope item and acceptance criterion in the full spec is covered by a ticket. Explicitly identify work already implemented rather than create duplicate tickets.
 - Each ticket has a clear responsibility, with no gaps or duplicate ownership of the same deliverable.
 - Tickets introduce no requirements beyond the sources and do not relax the full spec's minimum requirements or invariants.
+- Critical constraints whose omission could cause incorrect implementation are recorded in the relevant ticket, not lost in a generic summary.
 - Confirmed decisions remain confirmed decisions, and proposed approaches remain non-binding suggestions.
+- Every unresolved prerequisite has an owning ticket, an expected resolution artifact or result, and an explicit gate for dependent implementation.
 - Dependencies are genuine and acyclic, and each ticket's completion criteria are verifiable.
 
 Preserve the full spec's overall requirements primarily through references. Restate only the key constraints directly relevant to the ticket whose omission could lead to incorrect implementation. Avoid copying the entire spec.
@@ -79,59 +89,37 @@ Use a numbered list showing each ticket's:
 - Prerequisite tickets, explicitly stating when there are none.
 - Necessary stage boundaries, such as being mergeable but not yet releasable.
 
-Ask the user to confirm granularity, blocking relationships, and whether any tickets should be merged or split further. Iterate until approved, then write and publish the full ticket bodies. If writing the bodies reveals material changes to scope or dependencies, update the breakdown and obtain approval first.
+Ask the user to confirm granularity, blocking relationships, and whether any tickets should be merged or split further. Iterate until approved, then write and publish the initial ticket bodies. If writing the bodies reveals material changes to scope or dependencies, update the breakdown and obtain approval first.
 
-## 6. Write and Publish the Sub-Specs
+## 6. Write and Publish Initial Tickets
 
-Use the sub-spec format below in the user's language. The template defines structure and semantics, not mandatory empty sections. Omit optional sections when there is nothing to record; do not invent background, constraints, exclusions, or decisions to fill the template.
+Write concise tickets in the user's language. The template below is a starting point, not a requirement for identical headings. Cover the goal, scope, critical constraints, acceptance criteria, source, and blockers; add sections only when they carry necessary information. Do not repeat the spec's background or fill out a full sub-spec for each ticket.
 
-Preserve explicit contracts, interfaces, and technical boundaries. Include specific paths or code snippets only when they express confirmed boundaries or contracts. Do not turn a ticket into a file-by-file implementation checklist.
+Preserve confirmed contracts and technical boundaries that matter to the ticket. Include paths when they identify a relevant boundary, reference, or required deliverable, not a file-by-file implementation checklist. Record unresolved prerequisites as described above without filling them with assumptions.
 
 ### Ticket Template
 
 ```markdown
-# <Number or stage>: <Title>
+# <Number>: <Title>
 
-<Status according to project conventions; omit if none are defined>
+Spec: <Link to the source spec>
+Blocked by: <Prerequisite tickets and required results or confirmation; explicitly state when none>
+<Status or type according to project conventions, if needed>
 
-## Problem
+## Goal
 
-The specific problem this ticket addresses and its impact, without repeating the full spec's entire background.
-
-## Proposed Outcome
-
-The behavior that will work or be verifiable when this ticket is complete. Where necessary, distinguish ticket completion from complete product delivery.
-
-## Affected Users and Systems
-
-The users, systems, and technical boundaries directly relevant to this ticket.
-
-## Dependencies and Authoritative Sources
-
-- Prerequisite tickets and the necessary conditions they provide; explicitly state when there are none.
-- A reference to the full spec.
-- References to contracts, domain documents, or ADRs relevant to this ticket.
+The behavior or result this ticket delivers. State any limitation on availability at this stage.
 
 ## Scope
 
-The specific behaviors, workflows, and necessary technical boundaries this ticket owns.
+- Key behaviors or questions this ticket owns.
+- Critical constraints and confirmed boundaries, with references where needed.
+- Unresolved prerequisites: what must be resolved, by which ticket, and before which implementation; include required user confirmation.
 
-## Acceptance Criteria
+## Acceptance
 
-- [ ] A verifiable completion condition.
-- [ ] Necessary failure-case and integration verification.
-
-## Out of Scope
-
-Exclusions easily confused with this ticket's scope and work explicitly assigned to other tickets. Omit when there are none.
-
-## Constraints and Confirmed Decisions
-
-Reference existing constraints and, where necessary, restate invariants and confirmed contracts directly relevant to this ticket. Omit when there is nothing to record.
-
-## Proposed Approach
-
-Include only when the sources contain a relevant, unconfirmed implementation direction. Clearly identify it as non-binding. Otherwise omit.
+- Verifiable completion conditions, including necessary failure-case and integration checks.
+- For investigation or design, the required evidence or design artifact and confirmation gate.
 ```
 
 ### Publication Locations and Relationships
@@ -139,6 +127,18 @@ Include only when the sources contain a relevant, unconfirmed implementation dir
 - **Local Markdown**: By default, write to `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01` in dependency order, one ticket per file. Use relative links to the source spec and prerequisite tickets. Follow project configuration when it explicitly specifies another location.
 - **A real tracker**: Create one issue per ticket in dependency order so later tickets can reference existing identifiers. Prefer native blocking relationships; otherwise list blockers in the body. Keep the source reference in the body. Establish parent-child relationships according to project configuration and user authorization.
 
-Do not close the source issue, rewrite its body, or automatically advance its status. Do not overwrite existing tickets. If the same work already has a ticket, explain this to the user and confirm whether to update it.
+Do not close the source issue, rewrite its body, or automatically advance its status. Do not overwrite existing tickets during publication. If the same work already has a ticket, use the update process below when authorized; otherwise explain the overlap and ask whether to update it.
 
 After publication, summarize each ticket's path or link and identify the currently unblocked work that can start. If publication is only partially complete, clearly report which tickets were created and which were not; do not recreate tickets already published successfully.
+
+## 7. Supplement Tickets with Confirmed Decisions
+
+When asked to update tickets, or when the user confirms a decision while working through them:
+
+1. Read the existing tickets and the confirmation source. Identify every ticket whose scope, constraints, acceptance, or blockers are affected. A proposed design, experimental finding, or discussion comment alone does not authorize a decision requiring user confirmation.
+2. Integrate the confirmed result into the relevant bullets or link to its authoritative spec, contract, or design document. Retain the key consequences needed to implement the ticket correctly; do not copy the entire design into each ticket.
+3. Replace resolved questions and stale assumptions with the current confirmed requirements. Update blockers only when their deliverables and confirmation conditions are satisfied. Preserve unrelated ticket content; do not turn the update into a discussion log or implementation diary.
+4. Check each affected ticket for contradictions, missing acceptance coverage, and obsolete blockers. If the decision changes the overall scope or delivery breakdown beyond what the user approved, obtain approval for that change before treating it as settled. Identify any source-spec conflict rather than silently overriding it in a ticket.
+5. Summarize which tickets changed and which implementation gates remain open.
+
+Leave tickets unchanged when there is no new confirmed decision to incorporate. Do not use this maintenance pass to add speculative implementation detail or rewrite tickets into full sub-specs.
