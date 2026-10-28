@@ -40,6 +40,7 @@ Use `niri msg` to query windows, change focus, and take screenshots; `ydotool` f
   - `headless: false`.
   - `args: ['--profile-directory=Default']`.
 - If the browser is already open, reuse it.
+- If a website is not logged in, try “Sign in with Google” when available.
 
 ## Scope
 
