@@ -1,9 +1,9 @@
 ---
-name: decision-boundaries
-description: Decision boundaries before changing code. Use when writing a spec or when the user requests a code change directly.
+name: decide-for-me
+description: Make decisions on the user's behalf, bringing only those that need their input back to them. Use when writing a spec or when the user requests a code change directly.
 ---
 
-# Decision Boundaries
+# Decide for Me
 
 Apply these boundaries while shaping requirements in either of these situations:
 

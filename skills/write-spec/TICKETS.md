@@ -16,7 +16,7 @@ Read the project's `docs/agents/issue-tracker.md` when present and follow its co
 
 Distinguish readiness to decompose from readiness to implement. Confirmed goals and scope are enough to decompose when deliverables, acceptance criteria, and unresolved dependencies can be identified. If a question prevents defining those boundaries, clarify it with the user before publishing the affected breakdown. Do not conduct a general requirements interview or make spec decisions by writing tickets.
 
-For unresolved design or experimental questions within those boundaries, identify what must be resolved, which ticket owns that work, and which implementation depends on the result. Apply [`/decision-boundaries`](../decision-boundaries/SKILL.md) to choices requiring user confirmation. Investigation and design can proceed, but dependent implementation waits for the necessary results and confirmation.
+For unresolved design or experimental questions within those boundaries, identify what must be resolved, which ticket owns that work, and which implementation depends on the result. Apply [`/decide-for-me`](../decide-for-me/SKILL.md) to choices requiring user confirmation. Investigation and design can proceed, but dependent implementation waits for the necessary results and confirmation.
 
 ## 2. Investigate Implementation Boundaries
 

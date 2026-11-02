@@ -10,7 +10,7 @@ Personal skills for AI agents.
 | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`write-good-docs`](skills/write-good-docs/SKILL.md) | Write concise, code-grounded documentation that adds information beyond the implementation. |
 | [`write-good-test`](skills/write-good-test/SKILL.md) | Write risk-based behavioral tests that detect functional regressions. |
-| [`decision-boundaries`](skills/decision-boundaries/SKILL.md) | Decide when requirements need user agreement before a spec or direct code change. |
+| [`decide-for-me`](skills/decide-for-me/SKILL.md) | Make decisions autonomously and bring only those needing user input back to the user. |
 | [`write-spec`](skills/write-spec/SKILL.md)                         | Capture the current discussion as a spec and split a spec into tickets. |
 | [`implement`](skills/implement/SKILL.md) | Implement coding work from a user-confirmed spec. |
 | [`code-review`](skills/code-review/SKILL.md) | Review changes against repository standards and their originating spec. Simplified to avoid overengineering. |
