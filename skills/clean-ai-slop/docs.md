@@ -1,13 +1,14 @@
----
-name: write-good-docs
-description: Write clear, accurate, and useful documentation. Use when writing documentation except specs, requirements documents, ADRs, CONTEXT.md and handoff documents.
----
+# Documentation Standards
 
-# Write Good Docs
-
-Good documentation helps readers understand, use, or evaluate a system. Apply the following standards without announcing this skill or adding a report about the writing process.
+Good documentation helps readers understand, use, or evaluate a system. These standards apply to documentation except specs, requirements documents, ADRs, `CONTEXT.md`, and handoff documents.
 
 **Code is the sole authority for implemented behavior.** Documentation explains behavior; it does not establish implementation facts. When documentation conflicts with code, follow the current code and correct the documentation. Do not infer code behavior from documentation or change the implementation to make documentation true.
+
+## Clean without losing useful information
+
+For each section, identify the reader question it answers. Remove empty praise, template filler, duplicate explanations, development diaries, and implementation walkthroughs. Rewrite inaccurate claims from verified behavior rather than deleting necessary guidance. Consolidate repeated rules into one authoritative location and link to it elsewhere.
+
+Preserve prerequisites, usable examples, permission requirements, failure recovery, and important constraints. If a section mixes filler with useful information, retain the useful part.
 
 ## Answer the reader's actual questions
 

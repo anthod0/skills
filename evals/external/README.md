@@ -7,8 +7,8 @@ Compare how agents work with and without a target skill on fixed external tasks.
 | Case ID | Source | Agent task |
 | --- | --- | --- |
 | `implement/axios__axios-5085` | SWE-bench Multilingual, `test` | Implement the original issue |
-| `write-good-test/astropy__astropy-12907` | SWE-bench Lite through SWT-Bench | Write regression tests without modifying production code |
-| `write-good-test/sympy__sympy-20590` | SWE-bench Lite through SWT-Bench | Write regression tests without modifying production code |
+| `clean-ai-slop/astropy__astropy-12907` | SWE-bench Lite through SWT-Bench | Write regression tests without modifying production code |
+| `clean-ai-slop/sympy__sympy-20590` | SWE-bench Lite through SWT-Bench | Write regression tests without modifying production code |
 
 These are B (original-task) subset comparisons, not leaderboard submissions or evidence of general skill effectiveness. Dataset snapshots preserve original issue text and provenance. Reference patches and scoring fields in those snapshots are not supplied to agents or judges and are not executed.
 
@@ -21,13 +21,13 @@ Requires Bun (or Node.js 22+). Preparation and comparisons also require Docker, 
 ```bash
 # Offline materials validation: no Docker, credentials or model calls.
 ./scripts/eval-external.sh implement/axios__axios-5085 --check
-./scripts/eval-external.sh write-good-test/astropy__astropy-12907 --check
-./scripts/eval-external.sh write-good-test/sympy__sympy-20590 --check
+./scripts/eval-external.sh clean-ai-slop/astropy__astropy-12907 --check
+./scripts/eval-external.sh clean-ai-slop/sympy__sympy-20590 --check
 
 # Build repository/dependency environments only; no model calls or test execution.
 ./scripts/eval-external.sh implement/axios__axios-5085 --prepare
-./scripts/eval-external.sh write-good-test/astropy__astropy-12907 --prepare
-./scripts/eval-external.sh write-good-test/sympy__sympy-20590 --prepare
+./scripts/eval-external.sh clean-ai-slop/astropy__astropy-12907 --prepare
+./scripts/eval-external.sh clean-ai-slop/sympy__sympy-20590 --prepare
 
 # Paid comparison: explicitly select tested and independent judge models.
 ./scripts/eval-external.sh implement/axios__axios-5085 \
@@ -36,7 +36,7 @@ Requires Bun (or Node.js 22+). Preparation and comparisons also require Docker, 
 
 An optional final argument supplies an auth file. Credential selection follows the [fixture runner](../README.md#execution-and-credential-boundaries). No dependency installation takes place on the host.
 
-Both conditions use the same task, model, high reasoning, ten-minute budget and built image. Dependency skills are identical in both conditions; only the target skill is removed in `without-skill`. Implementation tasks supply `write-good-test`, `write-good-docs`, `test-filesystem-safety` and `code-review` as dependencies. Test-generation tasks supply `test-filesystem-safety`. This measures the target's incremental effect given those dependencies, not the whole package versus no skills.
+Both conditions use the same task, model, high reasoning, ten-minute budget and built image. Dependency skills are identical in both conditions; only the target skill is removed in `without-skill`. Implementation tasks supply `clean-ai-slop`, `test-filesystem-safety` and `code-review` as dependencies. Test-generation tasks supply `test-filesystem-safety`. They assess the test standards in `clean-ai-slop`, not its code or documentation standards. This measures the target's incremental effect given those dependencies, not the whole package versus no skills.
 
 The target is explicitly activated using Pi's `/skill:<name>` command in `with-skill`. The trace must show expanded instructions in the user context.
 

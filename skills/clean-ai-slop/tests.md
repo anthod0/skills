@@ -1,11 +1,12 @@
----
-name: write-good-test
-description: Read this skill when writing tests, including adding, modifying, or extending tests and assertions, and writing tests alongside feature implementation.
----
+# Test Standards
 
-# Write Good Tests
+Good tests fail when functionality breaks and continue to pass when only the internal implementation changes.
 
-Good tests fail when functionality breaks and continue to pass when only the internal implementation changes. Apply the following standards without announcing this skill or adding a report about test design.
+## Clean without losing behavioral signal
+
+For each test, identify the behavior it protects and examine each assertion. In mixed tests, remove or replace only the low-value assertions; preserve meaningful behavioral checks. Replace weak assertions with independent expected outcomes when the behavior warrants coverage. Remove a whole test only when it contributes no distinct behavioral value.
+
+After removing assertions, remove imports, fixtures, and helpers used exclusively by them. Do not skip tests, weaken expected outcomes, or update snapshots merely to make failures disappear.
 
 ## Write only behavioral tests; select coverage by risk
 
@@ -53,4 +54,4 @@ Do not add or retain tests merely asserting that a removed implementation is abs
 
 ## Filesystem safety
 
-When tests touch the real filesystem, read and follow the `test-filesystem-safety` skill.
+Before writing, reviewing, or running tests that touch the real filesystem, read and follow [test-filesystem-safety](../test-filesystem-safety/SKILL.md).

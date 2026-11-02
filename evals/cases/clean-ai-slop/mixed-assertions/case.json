@@ -1,5 +1,5 @@
 {
   "fixture": "ssh-hosts",
-  "skill": "write-good-test",
+  "skill": "clean-ai-slop",
   "allowed_changes": ["tests/**"]
 }

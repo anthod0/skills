@@ -2,9 +2,9 @@ import { changesBetween } from "./submission.mjs";
 import { reviewDirectory, validateReviewFiles } from "./review-files.mjs";
 
 export const supportedCases = [
-  "write-good-test/mixed-assertions",
-  "write-good-test/css-and-prompt-assertions",
-  "write-good-test/reply-language",
+  "clean-ai-slop/mixed-assertions",
+  "clean-ai-slop/css-and-prompt-assertions",
+  "clean-ai-slop/reply-language",
   "test-filesystem-safety/ssh-hosts-list-filter",
 ];
 export const conditions = ["without-skill", "with-skill"];

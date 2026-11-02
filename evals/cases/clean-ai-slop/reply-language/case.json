@@ -1,6 +1,6 @@
 {
   "fixture": "replydesk",
-  "skill": "write-good-test",
+  "skill": "clean-ai-slop",
   "allowed_changes": [
     "src/**",
     "tests/**",

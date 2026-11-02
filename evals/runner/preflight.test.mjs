@@ -7,9 +7,9 @@ import { fileURLToPath } from "node:url";
 test("paired CLI accepts supported development and test revision case materials", () => {
   const entry = fileURLToPath(new URL("./evaluate.mjs", import.meta.url));
   for (const caseId of [
-    "write-good-test/mixed-assertions",
-    "write-good-test/css-and-prompt-assertions",
-    "write-good-test/reply-language",
+    "clean-ai-slop/mixed-assertions",
+    "clean-ai-slop/css-and-prompt-assertions",
+    "clean-ai-slop/reply-language",
     "test-filesystem-safety/ssh-hosts-list-filter",
   ]) {
     const result = spawnSync(process.execPath, [entry, caseId, "--check"], {

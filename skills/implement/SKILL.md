@@ -5,7 +5,7 @@ description: "Implement coding work from a user-confirmed spec. Use when the use
 
 Read the confirmed spec identified by the user in full and treat it as the source of truth for implementation.
 
-Apply `/write-good-test` when writing or modifying tests, and `/write-good-docs` when writing or modifying documentation within its scope.
+Before making changes, read and apply [clean-ai-slop](../clean-ai-slop/SKILL.md).
 
 Apply the `/test-filesystem-safety` skill before writing or running any filesystem-touching test.
 

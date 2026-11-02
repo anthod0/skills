@@ -4,8 +4,8 @@ import { readRegular, readTree, checkFiles } from "../runner/files.mjs";
 
 export const caseIds = [
   "implement/axios__axios-5085",
-  "write-good-test/astropy__astropy-12907",
-  "write-good-test/sympy__sympy-20590",
+  "clean-ai-slop/astropy__astropy-12907",
+  "clean-ai-slop/sympy__sympy-20590",
 ];
 export const pins = {
   swe: "02e7a74ffd0b707aab73d203fe87bdc7c76afc8e",

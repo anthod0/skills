@@ -42,8 +42,8 @@ async function main() {
   checkScope([], manifest.allowed_changes);
   const skills = Object.create(null);
   const suppliedSkills =
-    manifest.skill === "write-good-test"
-      ? ["write-good-test", "test-filesystem-safety"]
+    manifest.skill === "clean-ai-slop"
+      ? ["clean-ai-slop", "test-filesystem-safety"]
       : [manifest.skill];
   for (const skill of suppliedSkills) {
     for (const [path, text] of Object.entries(
@@ -119,7 +119,10 @@ async function main() {
           provider,
           model,
           auth,
-          task,
+          task:
+            condition === "with-skill" && manifest.skill === "clean-ai-slop"
+              ? `/skill:clean-ai-slop ${task}`
+              : task,
           files,
           skills: supplied,
           thinking: report.thinking,
