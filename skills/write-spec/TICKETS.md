@@ -1,6 +1,6 @@
 # Implementation Tickets
 
-Read and follow this document when splitting a confirmed spec into tickets or updating tickets with confirmed decisions.
+Read and follow this document when splitting a spec into tickets or updating tickets with confirmed decisions.
 
 Initially record each ticket's goal, scope highlights, critical constraints, acceptance criteria, and dependencies. Supplement relevant tickets as later decisions are confirmed; do not require a complete design at decomposition time. The full spec remains authoritative for the overall outcome, scope, and final acceptance. Tickets do not replace or weaken its requirements.
 
@@ -8,15 +8,17 @@ Propose the breakdown first and publish only after the user approves it. Do not 
 
 ## 1. Read the Sources and Project Conventions
 
-Read the confirmed spec identified by the user, whether provided as a file path, issue number, or URL. For an issue, read its body and comments to identify confirmed revisions; do not treat every comment as an accepted requirement. The current conversation supplements confirmed context but does not replace a confirmed spec. If the spec has not been confirmed, obtain confirmation before starting decomposition.
+Read the spec identified by the user, whether provided as a file path, issue number, or URL. For an issue, read its body and comments to identify confirmed revisions; do not treat every comment as an accepted requirement. The current conversation supplements the spec but does not replace it. The spec may still have open questions; the user asking for a breakdown is enough to start.
+
+Check the spec's external integration points. If external interface usage that affects ticket boundaries is unverified, investigate it as described in [Understand External Interfaces](SKILL.md#understand-external-interfaces) and update the spec. An unfinished prerequisite validation project does not stop decomposition; it stays outside the tickets and blocks the tickets that depend on its results.
 
 Read the relevant contracts, domain terminology, ADRs, and existing tickets. Use existing code to understand the current state, constraints, and effort, not to introduce new requirements.
 
 Read the project's `docs/agents/issue-tracker.md` when present and follow its conventions for locations, statuses, labels, and relationships. Without an explicit tracker configuration, use Local Markdown under `.scratch/`.
 
-Distinguish readiness to decompose from readiness to implement. Confirmed goals and scope are enough to decompose when deliverables, acceptance criteria, and unresolved dependencies can be identified. If a question prevents defining those boundaries, clarify it with the user before publishing the affected breakdown. Do not conduct a general requirements interview or make spec decisions by writing tickets.
+Distinguish readiness to decompose from readiness to implement. Decomposition is ready when you can describe the implementation path well enough to name the work units, their deliverables, and the order they depend on each other. Open questions do not need to be settled first. Ask the user before proposing the breakdown only when a question changes how many work units there are or where their boundaries fall, and ask only that question. Do not conduct a general requirements interview or make spec decisions by writing tickets.
 
-For unresolved design or experimental questions within those boundaries, identify what must be resolved, which ticket owns that work, and which implementation depends on the result. Apply [`/decide-for-me`](../decide-for-me/SKILL.md) to choices requiring user confirmation. Investigation and design can proceed, but dependent implementation waits for the necessary results and confirmation.
+For each open question, identify who resolves it (a ticket, the prerequisite validation project, or a user decision under [`/decide-for-me`](../decide-for-me/SKILL.md)) and which tickets depend on the answer. Record the question in those tickets as a gate instead of guessing the answer. Tickets the question does not affect proceed normally; affected tickets can be published but wait for the answer before implementation.
 
 ## 2. Investigate Implementation Boundaries
 
@@ -46,9 +48,18 @@ Each ticket should:
 
 Distinguish ticket completion from full spec completion. If a stage is mergeable but not yet releasable to users, state that limitation explicitly. Final integration acceptance does not replace each ticket's own acceptance.
 
+### Separate Work Types
+
+Give every ticket exactly one [work type](SKILL.md#work-types): code implementation, external configuration, or deployment. External exploration is finished before the spec and never becomes a ticket.
+
+- Put external configuration and deployment in the first or last tickets of the breakdown. Configuration that code or its tests need before they can run goes in the first ticket. Deployment, and configuration that only matters once deployed, go in the last ticket.
+- Keep code implementation tickets to code and tests. Do not include steps or acceptance criteria that set environment values, change consoles or third-party resources, provision infrastructure, release, or verify a deployed environment. Code tickets may reference the configuration keys and integration points defined in the spec.
+- Make code implementation acceptance verifiable from the repository, through tests, local runs, or fakes of the external interface. Put checks that need a live environment in the deployment ticket.
+- Write configuration and deployment tickets as concrete operations with their target environment, required access, and verification. Note which steps need the user because the agent lacks access or authorization.
+
 ### Investigation and Design Tickets
 
-Use a separate investigation or design ticket when its findings or confirmed design are needed by later work. State the questions to answer, the evidence or design artifact to produce, and the confirmation required before dependent implementation starts. A design proposal is not a confirmed contract.
+Use a separate investigation or design ticket when its findings or confirmed design are needed by later work. These tickets cover internal design questions; external interface usage is already settled in the spec. State the questions to answer, the evidence or design artifact to produce, and the confirmation required before dependent implementation starts. A design proposal is not a confirmed contract.
 
 A question local to one delivery slice may remain in that ticket with an explicit resolve-and-confirm step before the affected implementation. Reference the pending result from dependent scope rather than inventing interfaces, fields, or behavior to make tickets look complete.
 
@@ -72,10 +83,11 @@ Before presenting the breakdown, verify that:
 
 - Every scope item and acceptance criterion in the full spec is covered by a ticket. Explicitly identify work already implemented rather than create duplicate tickets.
 - Each ticket has a clear responsibility, with no gaps or duplicate ownership of the same deliverable.
+- Each ticket has one work type. External configuration and deployment tickets sit at the start or end of the breakdown, and code implementation tickets contain no configuration or deployment steps or acceptance criteria.
 - Tickets introduce no requirements beyond the sources and do not relax the full spec's minimum requirements or invariants.
 - Critical constraints whose omission could cause incorrect implementation are recorded in the relevant ticket, not lost in a generic summary.
 - Confirmed decisions remain confirmed decisions, and proposed approaches remain non-binding suggestions.
-- Every unresolved prerequisite has an owning ticket, an expected resolution artifact or result, and an explicit gate for dependent implementation.
+- Every open question has an owner (a ticket, the validation project, or a user decision), an expected result, and an explicit gate on the tickets that depend on it.
 - Dependencies are genuine and acyclic, and each ticket's completion criteria are verifiable.
 
 Preserve the full spec's overall requirements primarily through references. Restate only the key constraints directly relevant to the ticket whose omission could lead to incorrect implementation. Avoid copying the entire spec.
@@ -85,9 +97,11 @@ Preserve the full spec's overall requirements primarily through references. Rest
 Use a numbered list showing each ticket's:
 
 - Title.
+- Work type.
 - Deliverable.
 - Prerequisite tickets, explicitly stating when there are none.
 - Necessary stage boundaries, such as being mergeable but not yet releasable.
+- Open questions that gate it, if any.
 
 Ask the user to confirm granularity, blocking relationships, and whether any tickets should be merged or split further. Iterate until approved, then write and publish the initial ticket bodies. If writing the bodies reveals material changes to scope or dependencies, update the breakdown and obtain approval first.
 
@@ -104,6 +118,7 @@ Preserve confirmed contracts and technical boundaries that matter to the ticket.
 
 Spec: <Link to the source spec>
 Blocked by: <Prerequisite tickets and required results or confirmation; explicitly state when none>
+Type: <Code implementation, external configuration, or deployment>
 <Status or type according to project conventions, if needed>
 
 ## Goal
