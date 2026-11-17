@@ -23,6 +23,7 @@ Personal skills for AI agents.
 | [`computer-use`](skills/computer-use/SKILL.md) | Automate Chromium and operate native niri/Wayland desktops. |
 | [`setup`](skills/setup/SKILL.md) | Initialize a repo's issue tracker, self-contained domain-modeling conventions, and workspace creation. |
 | [`handoff`](skills/handoff/SKILL.md) | Summarize the current conversation in a handoff document for another agent. |
+| [`log-mistake`](skills/log-mistake/SKILL.md) | Record agent mistakes in a repository log and apply the user's prevention measures. |
 
 ### Content Creation
 
