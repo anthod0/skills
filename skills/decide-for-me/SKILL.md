@@ -12,56 +12,51 @@ Apply these boundaries while shaping requirements in either of these situations:
 
 An approved spec or an explicit user decision is valid authorization within the scope it covers. Do not reopen it for discussion. Implementation governed by an approved spec is outside this skill unless it reveals a new decision that the spec did not settle.
 
-These boundaries are not an exhaustive classification of all decisions. Apply them to each concrete decision rather than to the task as a whole.
+Apply these boundaries to each concrete decision rather than to the task as a whole. A task of one type may contain a decision reserved for the user.
 
 ## Establish Existing Authorization
 
 Treat a decision as confirmed when the user has explicitly supplied, selected, or accepted it in the current conversation or an approved source of requirements. A precise instruction is itself confirmation; a broad request that states only the outcome while leaving a decision below open is not.
 
-Authorization is limited to the decision that was made. For example, authorization for a frontend change does not also authorize supporting API or database changes.
+Authorization is limited to the decision that was made.
 
-## Decision Rights
+## Reserve Architectural Decisions for the User
 
-### A. Reserve Key Decisions for the User
+The user keeps only foundational, architectural decisions. A decision is architectural when other code, data, or external systems will build on it, so reversing it later requires a migration or coordinated changes across modules. A decision contained in one module that can be reversed locally is not architectural.
 
-For each decision below that has not yet been confirmed:
+Judge each decision by this criterion. The following are typical architectural decisions, not an exhaustive list:
+
+- data model and storage schema changes, including adding a field or table;
+- breaking changes to public contracts: external APIs, events, and interfaces other systems or modules depend on;
+- module boundaries and cross-module interfaces, types, and inheritance relationships;
+- adding or removing an external dependency, service, or infrastructure component;
+- adding or restructuring a state machine;
+- introducing a new pattern, layer, or mechanism that departs from the codebase's main path;
+- changing an ADR.
+
+For each such decision that has not yet been confirmed:
 
 1. Investigate the existing system and relevant constraints.
-2. Proactively recommend one concrete choice, explaining material trade-offs when they affect the recommendation.
+2. Recommend one concrete choice, explaining material trade-offs when they affect the recommendation.
 3. Ask the user to accept or revise the recommendation.
-4. Treat the spec content and code changes that depend on the decision as blocked until the user responds.
+4. Treat the spec content and code changes that depend on the decision as blocked until the user responds. Work that neither depends on nor constrains it may continue.
 
-Work that neither depends on nor constrains the unresolved decision may continue.
+When writing a spec, record only agreed decisions as confirmed; do not present an unresolved recommendation as an implementation-ready decision.
 
-The following decisions require user confirmation:
+## Delegate Everything Else by Change Type
 
-- any database modification;
-- interface and event inputs, outputs, validation, and errors;
-- any state-machine modification;
-- adding or removing an external dependency;
-- changing an ADR;
-- types directly coupled to a database or interface definition, including request and response types, database enums, JSON fields, and derived fields;
-- interfaces, types, inheritance relationships, and function signatures spanning multiple modules;
-- execution-order or timing changes that affect externally observable behavior;
-- critical parameters such as page size, ordering, retry counts, and timeout values.
+Once the user has requested the related work, decide and proceed without a confirmation step when the change meets the condition for its type:
 
-When writing a spec, record only agreed decisions as confirmed; do not present an unresolved recommendation as an implementation-ready decision. When changing code directly, stop before editing anything that depends on an unresolved decision.
+| Type | Proceed when |
+|------|--------------|
+| `refactor` | Behavior is unchanged and the user has given the direction. Without a direction, propose one and wait for the user's choice. |
+| `chore` | It adds no money or time cost, such as paid services, longer build or CI time, or recurring manual work. Otherwise state the cost and ask. |
+| `fix` / `feat` | It leaves the architecture unchanged and follows the codebase's existing main path. |
+| `docs` | Always. |
+| `test` | Always. |
 
-### B. Delegate Implementation Decisions to the Agent
+Choices such as parameters, naming, internal control flow, non-breaking interface additions, and frontend details belong to the delegated change. Make them consistently with the existing code.
 
-Once the user has requested the related work, the agent may make the following decisions without seeking additional confirmation:
+When writing a spec, omit an implementation choice unless it is necessary to define the intended outcome. Do not log decisions while writing a spec; they are logged when the spec is implemented.
 
-- control flow, private functions, private types, internal naming, and other implementation choices contained within one module;
-- code-organization refactoring across files, modules, or functions when functionality and externally observable behavior remain unchanged;
-- formatting, lint fixes, and local type-checking fixes that do not change data structures;
-- documentation;
-- tests;
-- frontend changes.
-
-When writing a spec, omit an implementation choice unless it is necessary to define the intended outcome. When changing code directly, proceed without adding a confirmation step.
-
-Apply boundaries according to the decision's semantic effect, not the type of file being changed. If a frontend, documentation, test, lint, or type-checking change also makes a decision reserved for the user, that decision still requires user confirmation.
-
-### C. Other Decisions
-
-For a decision not covered by A or B, declare the implementation scope and ask the user to confirm it. Do not force an unlisted decision into either group merely to apply this skill.
+When changing code directly, record notable decisions made on the user's behalf following [decision-log.md](./decision-log.md). Mention the logged entries in the report.

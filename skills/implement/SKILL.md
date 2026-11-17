@@ -7,6 +7,8 @@ Read the confirmed spec identified by the user in full and treat it as the sourc
 
 Before making changes, read and apply [clean-ai-slop](../clean-ai-slop/SKILL.md).
 
+Record decisions the implementation applies in the decision log, following [decision-log.md](../decide-for-me/decision-log.md). Mention the logged entries in the report.
+
 Apply the `/test-filesystem-safety` skill before writing or running any filesystem-touching test.
 
 After completing the required code changes, finish in this order:
